@@ -89,17 +89,25 @@ This quickstart guide will walk you through setting up FundKit and processing yo
 
     ```typescript TypeScript
     import { PaymentClient } from '@fundkit/core';
+    import { HoneyCoin } from '@fundkit/honeycoin';
+    import { EasyPay } from '@fundkit/easypay';
+
+    // Initialize providers
+    const honeycoin = new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY!,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+    });
+
+    const easypay = new EasyPay({
+      apiKey: process.env.EASYPAY_SECRET!,
+      clientId: process.env.EASYPAY_CLIENT_ID!,
+    });
 
     // Create payment client
     const client = new PaymentClient({
-      honeycoin: {
-        apiKey: process.env.HONEYCOIN_API_KEY!,
-        environment: 'sandbox'
-      },
-      easypay: {
-        apiKey: process.env.EASYPAY_API_KEY!,
-        environment: 'sandbox'
-      }
+      apiKey: process.env.FUNDKIT_API_KEY!,
+      providers: [honeycoin, easypay],
+      environment: 'sandbox',
     });
 
     export default client;
@@ -107,17 +115,25 @@ This quickstart guide will walk you through setting up FundKit and processing yo
 
     ```javascript JavaScript
     const { PaymentClient } = require('@fundkit/core');
+    const { HoneyCoin } = require('@fundkit/honeycoin');
+    const { EasyPay } = require('@fundkit/easypay');
+
+    // Initialize providers
+    const honeycoin = new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY,
+    });
+
+    const easypay = new EasyPay({
+      apiKey: process.env.EASYPAY_SECRET,
+      clientId: process.env.EASYPAY_CLIENT_ID,
+    });
 
     // Create payment client
     const client = new PaymentClient({
-      honeycoin: {
-        apiKey: process.env.HONEYCOIN_API_KEY,
-        environment: 'sandbox'
-      },
-      easypay: {
-        apiKey: process.env.EASYPAY_API_KEY,
-        environment: 'sandbox'
-      }
+      apiKey: process.env.FUNDKIT_API_KEY,
+      providers: [honeycoin, easypay],
+      environment: 'sandbox',
     });
 
     module.exports = client;
@@ -146,10 +162,12 @@ This quickstart guide will walk you through setting up FundKit and processing yo
     async function processPayment() {
       try {
         // Create a payment collection
-        const result = await client.collect({
+        const result = await client.collection({
           amount: 10000, // Amount in smallest currency unit (10,000 = 100.00 UGX)
           currency: 'UGX',
-          phoneNumber: '+256701234567',
+          operator: 'mtn',
+          accountNumber: '+256701234567',
+          externalId: 'tx_' + Date.now(),
           reason: 'Test payment from FundKit'
         });
 
@@ -160,12 +178,12 @@ This quickstart guide will walk you through setting up FundKit and processing yo
         });
 
         // Check payment status
-        const status = await client.checkTransactionStatus(
-          result.data.transactionId,
-          result.provider
-        );
+        const status = await client.getTransaction({
+          provider: result.provider,
+          txId: result.data.transactionId,
+        });
 
-        console.log('Payment status:', status.data.status);
+        console.log('Payment status:', status?.data.status);
 
       } catch (error) {
         console.error('Payment failed:', error.message);
@@ -181,10 +199,12 @@ This quickstart guide will walk you through setting up FundKit and processing yo
     async function processPayment() {
       try {
         // Create a payment collection
-        const result = await client.collect({
+        const result = await client.collection({
           amount: 10000, // Amount in smallest currency unit
           currency: 'UGX',
-          phoneNumber: '+256701234567',
+          operator: 'mtn',
+          accountNumber: '+256701234567',
+          externalId: 'tx_' + Date.now(),
           reason: 'Test payment from FundKit'
         });
 
@@ -195,12 +215,12 @@ This quickstart guide will walk you through setting up FundKit and processing yo
         });
 
         // Check payment status
-        const status = await client.checkTransactionStatus(
-          result.data.transactionId,
-          result.provider
-        );
+        const status = await client.getTransaction({
+          provider: result.provider,
+          txId: result.data.transactionId,
+        });
 
-        console.log('Payment status:', status.data.status);
+        console.log('Payment status:', status?.data.status);
 
       } catch (error) {
         console.error('Payment failed:', error.message);
@@ -228,8 +248,11 @@ This quickstart guide will walk you through setting up FundKit and processing yo
     Set up your environment variables in a `.env` file:
 
     ```bash .env
-    HONEYCOIN_API_KEY=your_honeycoin_key
-    EASYPAY_API_KEY=your_easypay_key
+    FUNDKIT_API_KEY=fk_test_your_sandbox_key_here
+    HONEYCOIN_API_KEY=your_honeycoin_api_key
+    HONEYCOIN_PUBLIC_KEY=your_honeycoin_public_key
+    EASYPAY_SECRET=your_easypay_secret
+    EASYPAY_CLIENT_ID=your_easypay_client_id
     ```
 
     Then run your code:
