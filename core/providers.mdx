@@ -1,0 +1,569 @@
+---
+title: "Payment Providers"
+description: "Understanding payment providers and how FundKit manages them"
+---
+
+## Overview
+
+Payment providers are the backbone of FundKit. Each provider represents a different payment service (like HoneyCoin, EasyPay, or Tola) with its own API, authentication, and capabilities. FundKit abstracts these differences behind a unified interface.
+
+<Info>
+  Think of providers as different payment "channels" - each with their own strengths, coverage areas, and supported features. FundKit lets you use them all through one consistent API.
+</Info>
+
+## Provider Architecture
+
+### BaseProvider Class
+
+All payment providers extend the `BaseProvider` class, ensuring consistent behavior:
+
+```typescript
+import { BaseProvider } from '@fundkit/core';
+
+abstract class BaseProvider {
+  abstract collection(transaction: Transaction): Promise<CollectionResponse>;
+  abstract getTransaction(txId: string): Promise<TransactionStatus>;
+  abstract validateTransaction(transaction: Transaction): Promise<boolean>;
+  
+  // Common functionality
+  getName(): string;
+  getCapabilities(): ProviderCapabilities;
+  isHealthy(): Promise<boolean>;
+}
+```
+
+### Provider Lifecycle
+
+<Steps>
+  <Step title="Initialization">
+    Provider is configured with API credentials and settings
+    ```typescript
+    const honeycoin = new HoneyCoin({
+      apiKey: 'your_api_key',
+      publicKey: 'your_public_key'
+    });
+    ```
+  </Step>
+  
+  <Step title="Registration">
+    Provider is added to PaymentClient
+    ```typescript
+    const client = new PaymentClient({
+      providers: [honeycoin, easypay, tola]
+    });
+    ```
+  </Step>
+  
+  <Step title="Health Check">
+    FundKit periodically checks provider health and availability
+  </Step>
+  
+  <Step title="Selection">
+    PaymentClient selects the best provider for each transaction
+  </Step>
+  
+  <Step title="Execution">
+    Transaction is sent to the selected provider
+  </Step>
+</Steps>
+
+## Supported Providers
+
+### HoneyCoin
+
+**Coverage:** Uganda, Kenya, Tanzania  
+**Specialties:** Mobile money, multi-country support
+
+```typescript
+import { HoneyCoin } from '@fundkit/honeycoin';
+
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+  environment: 'sandbox' // or 'production'
+});
+```
+
+**Capabilities:**
+- ✅ Collections (charge customers)
+- ✅ Payouts (send money)
+- ✅ Status checking
+- ✅ Webhook notifications
+- ✅ Multi-currency (UGX, KES, TZS)
+- ✅ Multiple operators (MTN, Airtel, Safaricom)
+
+**Limits:**
+- Minimum: 500 UGX / 50 KES / 1000 TZS
+- Maximum: 10,000,000 UGX / 1,000,000 KES / 20,000,000 TZS
+
+### EasyPay
+
+**Coverage:** Uganda  
+**Specialties:** Fast processing, webhook support
+
+```typescript
+import { EasyPay } from '@fundkit/easypay';
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+  environment: 'sandbox'
+});
+```
+
+**Capabilities:**
+- ✅ Collections
+- ✅ Real-time webhooks
+- ✅ Fast processing (< 30 seconds)
+- ✅ MTN and Airtel support
+- ⏳ Payouts (coming soon)
+
+**Limits:**
+- Minimum: 1,000 UGX
+- Maximum: 5,000,000 UGX
+
+### Tola
+
+**Coverage:** Uganda  
+**Specialties:** Banking integration, reconciliation
+
+```typescript
+import { Tola } from '@fundkit/tola';
+
+const tola = new Tola({
+  apiKey: process.env.TOLA_API_KEY!,
+  merchantId: process.env.TOLA_MERCHANT_ID!,
+  environment: 'sandbox'
+});
+```
+
+**Capabilities:**
+- ✅ Collections
+- ✅ Payouts
+- ✅ Bank transfers
+- ✅ Transaction reconciliation
+- ✅ Detailed reporting
+- ✅ Multiple payment methods
+
+**Limits:**
+- Minimum: 500 UGX
+- Maximum: 20,000,000 UGX
+
+## Provider Configuration
+
+### Basic Configuration
+
+Each provider requires specific configuration:
+
+<Tabs>
+  <Tab title="HoneyCoin">
+    ```typescript
+    const honeycoin = new HoneyCoin({
+      apiKey: 'your_api_key',        // Required
+      publicKey: 'your_public_key',  // Required
+      environment: 'sandbox',       // 'sandbox' | 'production'
+      timeout: 30000,               // Request timeout (ms)
+      retries: 3                    // Retry attempts
+    });
+    ```
+  </Tab>
+  
+  <Tab title="EasyPay">
+    ```typescript
+    const easypay = new EasyPay({
+      apiKey: 'your_secret_key',     // Required
+      clientId: 'your_client_id',    // Required
+      environment: 'sandbox',       // 'sandbox' | 'production'
+      webhookUrl: 'https://yoursite.com/webhook',
+      timeout: 25000
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Tola">
+    ```typescript
+    const tola = new Tola({
+      apiKey: 'your_api_key',        // Required
+      merchantId: 'your_merchant_id', // Required
+      environment: 'sandbox',
+      callbackUrl: 'https://yoursite.com/callback',
+      timeout: 45000
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Advanced Configuration
+
+```typescript
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+  environment: 'production',
+  
+  // Advanced options
+  timeout: 45000,
+  retries: 5,
+  retryDelay: 2000,
+  
+  // Rate limiting
+  rateLimit: {
+    requests: 100,
+    window: 60000 // Per minute
+  },
+  
+  // Custom headers
+  headers: {
+    'User-Agent': 'MyApp/1.0',
+    'X-Custom-Header': 'value'
+  },
+  
+  // Webhook configuration
+  webhook: {
+    url: 'https://api.myapp.com/webhooks/honeycoin',
+    secret: 'webhook_secret_key',
+    events: ['transaction.completed', 'transaction.failed']
+  },
+  
+  // Logging
+  logger: customLogger,
+  logLevel: 'debug'
+});
+```
+
+## Provider Selection Strategies
+
+### Smart Selection (Default)
+
+FundKit automatically selects the best provider based on multiple factors:
+
+```typescript
+const client = new PaymentClient({
+  providers: [honeycoin, easypay, tola],
+  strategy: 'smart' // Default
+});
+
+// FundKit will automatically choose the best provider
+const result = await client.collection(transaction);
+```
+
+**Selection Criteria:**
+1. **Currency Support** - Does the provider support this currency?
+2. **Amount Limits** - Can the provider handle this transaction amount?
+3. **Operator Support** - Does the provider support this mobile operator?
+4. **Provider Health** - Is the provider currently healthy?
+5. **Success Rate** - Historical success rate for similar transactions
+6. **Response Time** - Average response time
+7. **Fees** - Transaction fees (if optimization enabled)
+
+### Round Robin
+
+Distribute transactions evenly across providers:
+
+```typescript
+const client = new PaymentClient({
+  providers: [honeycoin, easypay, tola],
+  strategy: 'round-robin'
+});
+
+// First transaction -> HoneyCoin
+// Second transaction -> EasyPay  
+// Third transaction -> Tola
+// Fourth transaction -> HoneyCoin (cycles back)
+```
+
+### Priority-Based
+
+Use providers in order of preference:
+
+```typescript
+const client = new PaymentClient({
+  providers: [
+    { provider: honeycoin, priority: 1 },    // Try first
+    { provider: easypay, priority: 2 },     // Try second
+    { provider: tola, priority: 3 }         // Try last
+  ],
+  strategy: 'priority'
+});
+```
+
+### Manual Selection
+
+Override automatic selection for specific transactions:
+
+```typescript
+// Force use of specific provider
+const result = await client.collection(transaction, {
+  preferredProvider: 'easypay'
+});
+
+// Exclude certain providers
+const result = await client.collection(transaction, {
+  excludeProviders: ['tola']
+});
+```
+
+## Provider Health Monitoring
+
+FundKit continuously monitors provider health:
+
+### Health Metrics
+
+```typescript
+// Check provider health
+const health = await honeycoin.getHealth();
+
+console.log(health);
+// {
+//   status: 'healthy',
+//   uptime: 99.9,
+//   responseTime: 1200,
+//   successRate: 98.5,
+//   lastCheck: '2024-01-15T10:30:00Z',
+//   errors: []
+// }
+```
+
+### Health States
+
+<AccordionGroup>
+  <Accordion icon="circle-check" title="Healthy">
+    Provider is functioning normally:
+    - Response time < 5 seconds
+    - Success rate > 95%
+    - No recent errors
+    ```typescript
+    status: 'healthy'
+    ```
+  </Accordion>
+  
+  <Accordion icon="triangle-exclamation" title="Degraded">
+    Provider is working but with issues:
+    - Response time 5-15 seconds
+    - Success rate 85-95%
+    - Some recent errors
+    ```typescript
+    status: 'degraded'
+    ```
+  </Accordion>
+  
+  <Accordion icon="circle-xmark" title="Unhealthy">
+    Provider has significant problems:
+    - Response time > 15 seconds
+    - Success rate < 85%
+    - Multiple recent errors
+    ```typescript
+    status: 'unhealthy'
+    ```
+  </Accordion>
+  
+  <Accordion icon="ban" title="Offline">
+    Provider is completely unavailable:
+    - Connection timeouts
+    - Authentication failures
+    - Service unavailable responses
+    ```typescript
+    status: 'offline'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Health-Based Fallback
+
+```typescript
+// Configure health-based fallback
+const client = new PaymentClient({
+  providers: [honeycoin, easypay, tola],
+  fallbackStrategy: {
+    enabled: true,
+    healthThreshold: 'degraded', // Fall back if provider is degraded or worse
+    maxFallbacks: 2,            // Try up to 2 alternative providers
+    fallbackDelay: 1000         // Wait 1 second between attempts
+  }
+});
+```
+
+## Provider Capabilities
+
+### Querying Capabilities
+
+```typescript
+// Check what a provider supports
+const capabilities = honeycoin.getCapabilities();
+
+console.log(capabilities);
+// {
+//   collections: true,
+//   payouts: true,
+//   currencies: ['UGX', 'KES', 'TZS'],
+//   operators: ['mtn', 'airtel', 'safaricom'],
+//   features: ['webhooks', 'status_check', 'refunds'],
+//   limits: {
+//     min: { UGX: 500, KES: 50, TZS: 1000 },
+//     max: { UGX: 10000000, KES: 1000000, TZS: 20000000 }
+//   }
+// }
+```
+
+### Capability-Based Selection
+
+```typescript
+// Find providers that support specific features
+const providers = client.getProvidersWithCapability('payouts');
+const kenyaProviders = client.getProvidersForCurrency('KES');
+const fastProviders = client.getProvidersByResponseTime('< 5s');
+```
+
+## Provider Events
+
+Monitor provider activities:
+
+```typescript
+// Listen for provider events
+honeycoin.on('request:started', (request) => {
+  console.log('API request started:', request.url);
+});
+
+honeycoin.on('request:completed', (request, response) => {
+  console.log('API request completed:', response.status);
+});
+
+honeycoin.on('request:failed', (request, error) => {
+  console.error('API request failed:', error.message);
+});
+
+honeycoin.on('health:changed', (oldHealth, newHealth) => {
+  console.log(`Health changed from ${oldHealth} to ${newHealth}`);
+});
+
+// PaymentClient also emits provider events
+client.on('provider:selected', (provider, transaction) => {
+  console.log(`Selected ${provider.getName()} for ${transaction.externalId}`);
+});
+
+client.on('provider:fallback', (fromProvider, toProvider, reason) => {
+  console.log(`Falling back from ${fromProvider} to ${toProvider}: ${reason}`);
+});
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card icon="shield-check" title="Use Multiple Providers">
+    ```typescript
+    // Good: Multiple providers for redundancy
+    const client = new PaymentClient({
+      providers: [honeycoin, easypay, tola]
+    });
+    ```
+  </Card>
+  
+  <Card icon="chart-line" title="Monitor Provider Health">
+    ```typescript
+    // Good: Regular health checks
+    setInterval(async () => {
+      for (const provider of providers) {
+        const health = await provider.getHealth();
+        if (health.status === 'unhealthy') {
+          await notifyTeam(provider, health);
+        }
+      }
+    }, 300000); // Every 5 minutes
+    ```
+  </Card>
+  
+  <Card icon="key" title="Secure Credential Storage">
+    ```typescript
+    // Good: Use environment variables
+    const honeycoin = new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY!,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!
+    });
+    
+    // Bad: Hardcoded credentials
+    // const honeycoin = new HoneyCoin({
+    //   apiKey: 'hc_123456789',
+    //   publicKey: 'pk_abcdefghi'
+    // });
+    ```
+  </Card>
+  
+  <Card icon="bell" title="Configure Webhooks">
+    ```typescript
+    // Good: Use webhooks for real-time updates
+    const easypay = new EasyPay({
+      apiKey: process.env.EASYPAY_SECRET!,
+      clientId: process.env.EASYPAY_CLIENT_ID!,
+      webhookUrl: 'https://api.myapp.com/webhooks/easypay'
+    });
+    ```
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="key" title="Authentication Issues">
+    ```typescript
+    // Check credentials are correct
+    try {
+      const health = await provider.getHealth();
+      console.log('Provider healthy:', health.status);
+    } catch (error) {
+      if (error.code === 'AUTHENTICATION_FAILED') {
+        console.error('Invalid API credentials');
+        // Check environment variables
+        // Verify credentials with provider
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion icon="clock" title="Timeout Problems">
+    ```typescript
+    // Increase timeout for slow providers
+    const honeycoin = new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY!,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+      timeout: 60000 // 60 seconds
+    });
+    ```
+  </Accordion>
+  
+  <Accordion icon="exclamation-triangle" title="Rate Limiting">
+    ```typescript
+    // Handle rate limiting gracefully
+    try {
+      const result = await provider.collection(transaction);
+    } catch (error) {
+      if (error.code === 'RATE_LIMITED') {
+        const retryAfter = error.details.retryAfter;
+        await sleep(retryAfter * 1000);
+        // Retry the request
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Transaction Lifecycle" icon="arrows-spin" href="/core/transactions">
+  Learn how transactions flow through providers
+</Card>
+
+<Card title="Error Handling" icon="shield-exclamation" href="/core/error-handling">
+  Handle provider errors effectively
+</Card>
+
+<Card title="HoneyCoin Setup" icon="honeypot" href="/providers/honeycoin">
+  Configure HoneyCoin provider
+</Card>
+
+<Card title="EasyPay Setup" icon="credit-card" href="/providers/easypay">
+  Configure EasyPay provider
+</Card>
+
+</CardGroup>

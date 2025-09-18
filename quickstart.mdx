@@ -1,80 +1,280 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get up and running with FundKit in under 5 minutes"
 ---
 
-## Get started in three steps
+## Build your first payment integration
 
-Get your documentation site running locally and make your first customization.
+This quickstart guide will walk you through setting up FundKit and processing your first payment in just a few minutes.
 
-### Step 1: Set up your local environment
+<Info>
+  **Prerequisites:** Node.js 16+ and npm/yarn/pnpm/bun installed on your machine.
+</Info>
+
+## Step 1: Install FundKit
+
+Install the core package and your chosen providers:
+
+<CodeGroup>
+
+```bash npm
+npm install @fundkit/core @fundkit/honeycoin @fundkit/easypay
+```
+
+```bash yarn
+yarn add @fundkit/core @fundkit/honeycoin @fundkit/easypay
+```
+
+```bash pnpm
+pnpm add @fundkit/core @fundkit/honeycoin @fundkit/easypay
+```
+
+```bash bun
+bun add @fundkit/core @fundkit/honeycoin @fundkit/easypay
+```
+
+</CodeGroup>
+
+## Step 2: Get API Keys
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+  <Accordion icon="flask" title="Sandbox Keys (Recommended for testing)">
+    For testing, you can use FundKit's unified sandbox:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+    ```bash
+    FUNDKIT_API_KEY=fk_test_your_sandbox_key_here
+    ```
+    
+    <Tip>Sandbox keys let you test immediately without provider approval!</Tip>
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+  
+  <Accordion icon="key" title="Provider Keys (For production)">
+    Get API keys from your chosen providers:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+    **HoneyCoin:**
+    - Sign up at [honeycoin.io](https://honeycoin.io)
+    - Get your API key and public key from the dashboard
+    
+    **EasyPay:**
+    - Register at [easypay.ug](https://easypay.ug) 
+    - Obtain your client ID and API secret
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## Step 3: Initialize the Payment Client
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+Create a new file `payment.js` (or `payment.ts` for TypeScript):
+
+<CodeGroup>
+
+```typescript TypeScript
+import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
+import { EasyPay } from '@fundkit/easypay';
+
+// Initialize providers
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+});
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+});
+
+// Create payment client
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [honeycoin, easypay],
+  environment: 'sandbox', // Use 'production' for live transactions
+});
+
+export default client;
+```
+
+```javascript JavaScript
+const { PaymentClient } = require('@fundkit/core');
+const { HoneyCoin } = require('@fundkit/honeycoin');
+const { EasyPay } = require('@fundkit/easypay');
+
+// Initialize providers
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY,
+});
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET,
+  clientId: process.env.EASYPAY_CLIENT_ID,
+});
+
+// Create payment client
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY,
+  providers: [honeycoin, easypay],
+  environment: 'sandbox',
+});
+
+module.exports = client;
+```
+
+</CodeGroup>
+
+## Step 4: Process Your First Payment
+
+<CodeGroup>
+
+```typescript TypeScript
+import client from './payment';
+
+async function processPayment() {
+  try {
+    // Create a transaction
+    const transaction = {
+      amount: 5000, // Amount in smallest currency unit (e.g., cents)
+      currency: 'UGX',
+      operator: 'mtn', // mtn, airtel, etc.
+      accountNumber: '256779280949',
+      externalId: 'tx_' + Date.now(),
+      reason: 'Test payment from FundKit'
+    };
+
+    // Process the payment
+    console.log('Processing payment...');
+    const response = await client.collection(transaction);
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    console.log('Payment initiated:', {
+      provider: response.provider,
+      transactionId: response.data.transactionId,
+      status: response.data.status
+    });
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    // Check payment status
+    const status = await client.getTransaction({
+      provider: response.provider,
+      txId: response.data.transactionId,
+    });
+    
+    console.log('Payment status:', status);
+    
+  } catch (error) {
+    console.error('Payment failed:', error);
+  }
+}
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+processPayment();
+```
 
-### Step 3: Go live
+```javascript JavaScript
+const client = require('./payment');
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+async function processPayment() {
+  try {
+    // Create a transaction
+    const transaction = {
+      amount: 5000,
+      currency: 'UGX',
+      operator: 'mtn',
+      accountNumber: '256779280949',
+      externalId: 'tx_' + Date.now(),
+      reason: 'Test payment from FundKit'
+    };
 
-## Next steps
+    // Process the payment
+    console.log('Processing payment...');
+    const response = await client.collection(transaction);
+    
+    console.log('Payment initiated:', {
+      provider: response.provider,
+      transactionId: response.data.transactionId,
+      status: response.data.status
+    });
 
-Now that you have your docs running, explore these key features:
+    // Check payment status
+    const status = await client.getTransaction({
+      provider: response.provider,
+      txId: response.data.transactionId,
+    });
+    
+    console.log('Payment status:', status);
+    
+  } catch (error) {
+    console.error('Payment failed:', error);
+  }
+}
+
+processPayment();
+```
+
+</CodeGroup>
+
+## Step 5: Run Your Integration
+
+Set up your environment variables in a `.env` file:
+
+```bash .env
+FUNDKIT_API_KEY=fk_test_your_sandbox_key
+HONEYCOIN_API_KEY=your_honeycoin_key
+HONEYCOIN_PUBLIC_KEY=your_honeycoin_public_key
+EASYPAY_SECRET=your_easypay_secret
+EASYPAY_CLIENT_ID=your_easypay_client_id
+```
+
+Then run your code:
+
+```bash
+node payment.js
+# or for TypeScript:
+npx tsx payment.ts
+```
+
+## 🎉 Success!
+
+You should see output similar to:
+
+```
+Processing payment...
+Payment initiated: {
+  provider: 'honeycoin',
+  transactionId: 'txn_abc123xyz',
+  status: 'pending'
+}
+Payment status: {
+  status: 'completed',
+  amount: 5000,
+  currency: 'UGX'
+}
+```
+
+## Next Steps
 
 <CardGroup cols={2}>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
+<Card title="Core Concepts" icon="lightbulb" href="/core/payment-client">
+  Learn about providers, transactions, and error handling
 </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
+<Card title="Provider Setup" icon="plug" href="/providers/honeycoin">
+  Configure specific payment providers
 </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
+<Card title="Error Handling" icon="shield-exclamation" href="/core/error-handling">
+  Handle errors gracefully in production
 </Card>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
+<Card title="API Reference" icon="code" href="/api-reference/payment-client">
+  Explore the complete FundKit API
 </Card>
 
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+<Warning>
+  **Important:** Always use sandbox mode for testing. Switch to production mode only when you're ready to process real payments.
+</Warning>
+
+## Need Help?
+
+<Card title="Join our Discord Community" icon="discord" href="https://discord.gg/fundkit">
+  Get help from other developers and the FundKit team
+</Card>

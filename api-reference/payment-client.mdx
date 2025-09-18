@@ -1,0 +1,344 @@
+---
+title: "PaymentClient API"
+description: "Complete API reference for the FundKit PaymentClient class"
+---
+
+# PaymentClient API Reference
+
+The `PaymentClient` is the main entry point for FundKit integration. It provides a unified interface to interact with multiple payment providers.
+
+## Constructor
+
+### `new PaymentClient(config)`
+
+Creates a new PaymentClient instance with provider configurations.
+
+**Parameters:**
+- `config` (object): Configuration object for providers
+
+**Example:**
+```typescript
+import { PaymentClient } from '@fundkit/core';
+
+const client = new PaymentClient({
+  honeycoin: {
+    apiKey: 'your-honeycoin-api-key',
+    environment: 'sandbox' // or 'production'
+  },
+  easypay: {
+    apiKey: 'your-easypay-api-key',
+    environment: 'sandbox'
+  },
+  tola: {
+    apiKey: 'your-tola-api-key',
+    environment: 'sandbox'
+  }
+});
+```
+
+**Configuration Options:**
+
+| Provider | Required Fields | Optional Fields |
+|----------|----------------|-----------------|
+| `honeycoin` | `apiKey` | `environment`, `baseUrl`, `timeout` |
+| `easypay` | `apiKey` | `environment`, `baseUrl`, `timeout` |
+| `tola` | `apiKey` | `environment`, `baseUrl`, `timeout` |
+
+## Methods
+
+### `collect(request)`
+
+Initiates a payment collection request using the best available provider.
+
+**Parameters:**
+- `request` (CollectionRequest): Payment collection details
+
+**Returns:** `Promise<PayClientCollectionResponse>`
+
+**Example:**
+```typescript
+const result = await client.collect({
+  amount: 10000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Payment for order #12345',
+  reference: 'order-12345'
+});
+
+console.log(result.provider); // 'honeycoin'
+console.log(result.data.transactionId); // 'tx-abc123'
+```
+
+**Request Schema:**
+```typescript
+interface CollectionRequest {
+  amount: number;          // Amount in minor currency units
+  currency: string;        // ISO currency code
+  phoneNumber: string;     // International format
+  reason: string;          // Payment description
+  reference?: string;      // Optional external reference
+  metadata?: object;       // Optional metadata
+}
+```
+
+**Response Schema:**
+```typescript
+interface PayClientCollectionResponse {
+  provider: string;        // Selected provider name
+  data: CollectionResponse;
+}
+
+interface CollectionResponse {
+  transactionId: string;   // Provider transaction ID
+  status: TransactionStatus;
+  amount: number;
+  currency: string;
+  phoneNumber: string;
+  reference?: string;
+  metadata?: object;
+  createdAt: string;       // ISO timestamp
+}
+```
+
+**Validation Rules:**
+- `amount`: Must be positive integer
+- `currency`: Must be supported by at least one provider
+- `phoneNumber`: Must be valid international format
+- `reason`: Required, minimum 3 characters
+
+### `checkTransactionStatus(transactionId, provider?)`
+
+Checks the current status of a transaction.
+
+**Parameters:**
+- `transactionId` (string): Transaction ID to check
+- `provider` (string, optional): Specific provider to query
+
+**Returns:** `Promise<PayClientTransactionResponse>`
+
+**Example:**
+```typescript
+const status = await client.checkTransactionStatus(
+  'tx-abc123',
+  'honeycoin'
+);
+
+console.log(status.data.status); // 'completed'
+```
+
+### `getAvailableProviders()`
+
+Returns list of configured and available providers.
+
+**Returns:** `string[]`
+
+**Example:**
+```typescript
+const providers = client.getAvailableProviders();
+console.log(providers); // ['honeycoin', 'easypay', 'tola']
+```
+
+### `getProviderCurrencies(provider?)`
+
+Returns supported currencies for a provider or all providers.
+
+**Parameters:**
+- `provider` (string, optional): Specific provider name
+
+**Returns:** `string[] | Record<string, string[]>`
+
+**Example:**
+```typescript
+// Get currencies for specific provider
+const honeycoinCurrencies = client.getProviderCurrencies('honeycoin');
+console.log(honeycoinCurrencies); // ['UGX', 'KES', 'TZS']
+
+// Get currencies for all providers
+const allCurrencies = client.getProviderCurrencies();
+console.log(allCurrencies);
+// {
+//   honeycoin: ['UGX', 'KES', 'TZS'],
+//   easypay: ['UGX'],
+//   tola: ['UGX']
+// }
+```
+
+### `validateRequest(request)`
+
+Validates a collection request without executing it.
+
+**Parameters:**
+- `request` (CollectionRequest): Request to validate
+
+**Returns:** `ValidationResult`
+
+**Example:**
+```typescript
+const validation = client.validateRequest({
+  amount: -100, // Invalid
+  currency: 'USD', // Unsupported
+  phoneNumber: 'invalid',
+  reason: ''
+});
+
+if (!validation.isValid) {
+  console.log(validation.errors);
+  // [
+  //   { field: 'amount', message: 'Amount must be positive' },
+  //   { field: 'currency', message: 'Currency USD not supported' },
+  //   { field: 'phoneNumber', message: 'Invalid phone number format' },
+  //   { field: 'reason', message: 'Reason is required' }
+  // ]
+}
+```
+
+## Events
+
+The PaymentClient extends EventEmitter and emits various events during operation.
+
+### Event: `transaction:created`
+
+Emitted when a new transaction is created.
+
+```typescript
+client.on('transaction:created', (data) => {
+  console.log('Transaction created:', data.transactionId);
+});
+```
+
+### Event: `transaction:updated`
+
+Emitted when a transaction status changes.
+
+```typescript
+client.on('transaction:updated', (data) => {
+  console.log('Status changed:', data.status);
+});
+```
+
+### Event: `provider:selected`
+
+Emitted when a provider is selected for a transaction.
+
+```typescript
+client.on('provider:selected', (data) => {
+  console.log('Selected provider:', data.provider);
+});
+```
+
+### Event: `error`
+
+Emitted when an error occurs.
+
+```typescript
+client.on('error', (error) => {
+  console.error('Payment error:', error.message);
+});
+```
+
+## Configuration Options
+
+### Environment Settings
+
+```typescript
+interface ProviderConfig {
+  apiKey: string;
+  environment?: 'sandbox' | 'production';
+  baseUrl?: string;
+  timeout?: number;
+  retries?: number;
+}
+```
+
+### Global Options
+
+```typescript
+const client = new PaymentClient(providerConfigs, {
+  defaultTimeout: 30000,
+  retryAttempts: 3,
+  retryDelay: 1000,
+  validateOnInit: true,
+  logLevel: 'info'
+});
+```
+
+## Error Handling
+
+All methods can throw the following error types:
+
+### `ValidationError`
+
+Thrown when request validation fails.
+
+```typescript
+try {
+  await client.collect(invalidRequest);
+} catch (error) {
+  if (error.name === 'ValidationError') {
+    console.log('Validation failed:', error.details);
+  }
+}
+```
+
+### `ProviderError`
+
+Thrown when a provider API call fails.
+
+```typescript
+try {
+  await client.collect(request);
+} catch (error) {
+  if (error.name === 'ProviderError') {
+    console.log('Provider failed:', error.provider, error.message);
+  }
+}
+```
+
+### `ConfigurationError`
+
+Thrown when client configuration is invalid.
+
+```typescript
+try {
+  const client = new PaymentClient({});
+} catch (error) {
+  if (error.name === 'ConfigurationError') {
+    console.log('Config error:', error.message);
+  }
+}
+```
+
+## Type Definitions
+
+### `TransactionStatus`
+
+```typescript
+type TransactionStatus = 
+  | 'pending'
+  | 'processing' 
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'expired';
+```
+
+### `CurrencyCode`
+
+```typescript
+type CurrencyCode = 'UGX' | 'KES' | 'TZS' | 'RWF';
+```
+
+### `ProviderName`
+
+```typescript
+type ProviderName = 'honeycoin' | 'easypay' | 'tola';
+```
+
+## Best Practices
+
+1. **Always handle errors**: Wrap API calls in try-catch blocks
+2. **Validate before submitting**: Use `validateRequest()` for client-side validation
+3. **Monitor transaction status**: Use webhooks or polling for status updates
+4. **Use proper phone format**: Always use international format (+country-code)
+5. **Handle provider failures**: Implement retry logic for transient failures
+6. **Secure API keys**: Never expose API keys in client-side code

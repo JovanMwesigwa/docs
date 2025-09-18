@@ -1,0 +1,398 @@
+---
+title: "Installation"
+description: "Install FundKit packages and set up your development environment"
+---
+
+## Package Installation
+
+FundKit uses a modular architecture where you install only the packages you need.
+
+### Core Package (Required)
+
+The core package contains the main PaymentClient and shared functionality:
+
+<CodeGroup>
+
+```bash npm
+npm install @fundkit/core
+```
+
+```bash yarn
+yarn add @fundkit/core
+```
+
+```bash pnpm
+pnpm add @fundkit/core
+```
+
+```bash bun
+bun add @fundkit/core
+```
+
+</CodeGroup>
+
+### Provider Packages (Choose what you need)
+
+Install the specific payment providers you want to support:
+
+<Tabs>
+  <Tab title="HoneyCoin">
+    ```bash
+    npm install @fundkit/honeycoin
+    ```
+    
+    **Supports:** Mobile money in Uganda, Kenya, Tanzania
+    
+    **Features:** Collections, payouts, status checking
+  </Tab>
+  
+  <Tab title="EasyPay">
+    ```bash
+    npm install @fundkit/easypay
+    ```
+    
+    **Supports:** MTN, Airtel mobile money in Uganda
+    
+    **Features:** Collections, real-time webhooks
+  </Tab>
+  
+  <Tab title="Tola">
+    ```bash
+    npm install @fundkit/tola
+    ```
+    
+    **Supports:** Mobile money and bank transfers in Uganda
+    
+    **Features:** Collections, payouts, reconciliation
+  </Tab>
+</Tabs>
+
+### Type Definitions (Optional)
+
+For enhanced TypeScript support:
+
+```bash
+npm install @fundkit/types
+```
+
+<Note>
+  The types package is automatically included when you install core or provider packages, but you can install it separately if you only need the type definitions.
+</Note>
+
+## Environment Setup
+
+### Node.js Requirements
+
+<AccordionGroup>
+  <Accordion icon="nodejs" title="Supported Node.js Versions">
+    FundKit supports the following Node.js versions:
+    
+    - **Node.js 16.x** ✅ (Minimum supported)
+    - **Node.js 18.x** ✅ (Recommended)
+    - **Node.js 20.x** ✅ (Latest LTS)
+    - **Node.js 22.x** ✅ (Current)
+    
+    <Warning>
+      Node.js versions below 16.x are not supported due to missing ESM and crypto features.
+    </Warning>
+  </Accordion>
+  
+  <Accordion icon="gear" title="Runtime Compatibility">
+    FundKit works in multiple JavaScript runtimes:
+    
+    - **Node.js** - Full support
+    - **Bun** - Full support
+    - **Deno** - Supported with import maps
+    - **Cloudflare Workers** - Supported
+    - **Vercel Edge Functions** - Supported
+    - **Browser** - Core functionality only (no Node.js APIs)
+  </Accordion>
+</AccordionGroup>
+
+### Environment Variables
+
+Set up your environment variables for API keys and configuration:
+
+```bash .env
+# FundKit Configuration
+FUNDKIT_API_KEY=fk_test_your_sandbox_key_here
+FUNDKIT_ENVIRONMENT=sandbox
+
+# HoneyCoin (if using)
+HONEYCOIN_API_KEY=your_honeycoin_api_key
+HONEYCOIN_PUBLIC_KEY=your_honeycoin_public_key
+
+# EasyPay (if using)  
+EASYPAY_SECRET=your_easypay_secret
+EASYPAY_CLIENT_ID=your_easypay_client_id
+
+# Tola (if using)
+TOLA_API_KEY=your_tola_api_key
+TOLA_MERCHANT_ID=your_tola_merchant_id
+```
+
+<Tip>
+  Use `fk_test_` prefixed keys for sandbox testing. These work immediately without provider approval.
+</Tip>
+
+## Framework Integration
+
+### Express.js
+
+```typescript
+import express from 'express';
+import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
+
+const app = express();
+app.use(express.json());
+
+const paymentClient = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [
+    new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY!,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+    })
+  ],
+  environment: 'sandbox'
+});
+
+app.post('/payments', async (req, res) => {
+  try {
+    const result = await paymentClient.collection(req.body);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+```
+
+### Next.js
+
+<CodeGroup>
+
+```typescript app/api/payments/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
+
+const paymentClient = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [
+    new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY!,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+    })
+  ],
+  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const transaction = await request.json();
+    const result = await paymentClient.collection(transaction);
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error.message }, 
+      { status: 400 }
+    );
+  }
+}
+```
+
+```typescript pages/api/payments.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
+
+const paymentClient = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [
+    new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY!,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+    })
+  ],
+  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+});
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const result = await paymentClient.collection(req.body);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+```
+
+</CodeGroup>
+
+### Fastify
+
+```typescript
+import Fastify from 'fastify';
+import { PaymentClient } from '@fundkit/core';
+import { EasyPay } from '@fundkit/easypay';
+
+const fastify = Fastify({ logger: true });
+
+const paymentClient = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [
+    new EasyPay({
+      apiKey: process.env.EASYPAY_SECRET!,
+      clientId: process.env.EASYPAY_CLIENT_ID!,
+    })
+  ],
+  environment: 'sandbox'
+});
+
+fastify.post('/payments', async (request, reply) => {
+  try {
+    const result = await paymentClient.collection(request.body);
+    return result;
+  } catch (error) {
+    reply.code(400);
+    return { error: error.message };
+  }
+});
+```
+
+## TypeScript Configuration
+
+For optimal TypeScript support, ensure your `tsconfig.json` includes:
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  }
+}
+```
+
+## Verification
+
+Verify your installation by running a simple test:
+
+<CodeGroup>
+
+```typescript test.ts
+import { PaymentClient } from '@fundkit/core';
+
+console.log('FundKit installed successfully!');
+console.log('PaymentClient available:', !!PaymentClient);
+
+// Test basic instantiation
+try {
+  const client = new PaymentClient({
+    apiKey: 'test_key',
+    providers: [],
+    environment: 'sandbox'
+  });
+  console.log('✅ PaymentClient instantiated successfully');
+} catch (error) {
+  console.error('❌ Installation issue:', error.message);
+}
+```
+
+```javascript test.js
+const { PaymentClient } = require('@fundkit/core');
+
+console.log('FundKit installed successfully!');
+console.log('PaymentClient available:', !!PaymentClient);
+
+// Test basic instantiation
+try {
+  const client = new PaymentClient({
+    apiKey: 'test_key',
+    providers: [],
+    environment: 'sandbox'
+  });
+  console.log('✅ PaymentClient instantiated successfully');
+} catch (error) {
+  console.error('❌ Installation issue:', error.message);
+}
+```
+
+</CodeGroup>
+
+Run the test:
+
+```bash
+# For TypeScript
+npx tsx test.ts
+
+# For JavaScript
+node test.js
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="exclamation-triangle" title="Module not found errors">
+    If you see module resolution errors:
+    
+    1. Ensure you're using Node.js 16+ 
+    2. Check that all packages are installed: `npm ls @fundkit/core`
+    3. Clear your node_modules and reinstall: `rm -rf node_modules package-lock.json && npm install`
+    4. Verify your package.json includes the packages
+  </Accordion>
+  
+  <Accordion icon="gear" title="TypeScript compilation issues">
+    For TypeScript issues:
+    
+    1. Update to TypeScript 4.5+: `npm install -D typescript@latest`
+    2. Enable `esModuleInterop` and `allowSyntheticDefaultImports` in tsconfig.json
+    3. Use `import type` for type-only imports from `@fundkit/types`
+  </Accordion>
+  
+  <Accordion icon="cloud" title="Runtime environment issues">
+    For specific runtime environments:
+    
+    **Cloudflare Workers:** Use `import` syntax, not `require()`
+    
+    **Vercel Edge:** Ensure you're not using Node.js-specific APIs
+    
+    **Browser:** Some provider packages use Node.js APIs and won't work in browsers
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Quick Start" icon="rocket" href="/quickstart">
+  Build your first payment integration
+</Card>
+
+<Card title="Core Concepts" icon="lightbulb" href="/core/payment-client">
+  Learn about PaymentClient and providers
+</Card>
+
+<Card title="Provider Setup" icon="plug" href="/providers/honeycoin">
+  Configure your chosen payment providers
+</Card>
+
+<Card title="API Reference" icon="code" href="/api-reference/payment-client">
+  Explore the complete API documentation
+</Card>
+
+</CardGroup>

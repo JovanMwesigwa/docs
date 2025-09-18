@@ -1,0 +1,790 @@
+---
+title: "Tola Provider"
+description: "Complete guide to using Tola payment provider with FundKit"
+---
+
+## Overview
+
+Tola is Uganda's comprehensive financial services platform, offering mobile money, banking, and advanced payment solutions. Known for their robust infrastructure and enterprise-grade features, Tola is perfect for businesses requiring detailed reporting, reconciliation, and multiple payment channels.
+
+<Info>
+  Tola excels in enterprise integrations with features like transaction reconciliation, detailed reporting, multi-channel payments, and strong compliance frameworks ideal for larger businesses and financial institutions.
+</Info>
+
+## Coverage & Capabilities
+
+### Supported Payment Methods
+
+<CardGroup cols={3}>
+  <Card title="Mobile Money" icon="mobile">
+    **Networks:** MTN, Airtel  
+    **Currency:** UGX  
+    **Features:** Collections, Payouts, Status
+  </Card>
+  
+  <Card title="Bank Transfers" icon="building-columns">
+    **Banks:** All major Ugandan banks  
+    **Currency:** UGX  
+    **Features:** Collections, Payouts, RTGS
+  </Card>
+  
+  <Card title="Card Payments" icon="credit-card">
+    **Types:** Visa, Mastercard  
+    **Currency:** UGX, USD  
+    **Features:** Collections, Refunds
+  </Card>
+</CardGroup>
+
+### Advanced Capabilities
+
+- ✅ **Multi-channel Payments** - Mobile money, banking, cards
+- ✅ **Bulk Operations** - Process thousands of transactions
+- ✅ **Transaction Reconciliation** - Automated settlement reports
+- ✅ **Real-time Webhooks** - Instant status notifications
+- ✅ **Detailed Reporting** - Comprehensive transaction analytics
+- ✅ **Refund Processing** - Full and partial refunds
+- ✅ **Escrow Services** - Secure transaction holding
+- ✅ **Multi-currency Support** - UGX and USD
+
+## Installation
+
+```bash
+npm install @fundkit/tola
+```
+
+## Configuration
+
+### Basic Setup
+
+```typescript
+import { Tola } from '@fundkit/tola';
+
+const tola = new Tola({
+  apiKey: process.env.TOLA_API_KEY!,
+  merchantId: process.env.TOLA_MERCHANT_ID!,
+  environment: 'sandbox' // or 'production'
+});
+```
+
+### Configuration Options
+
+<ParamField path="apiKey" type="string" required>
+  Your Tola API key from the merchant dashboard.
+</ParamField>
+
+<ParamField path="merchantId" type="string" required>
+  Your unique Tola merchant identifier.
+</ParamField>
+
+<ParamField path="environment" type="'sandbox' | 'production'" default="sandbox">
+  Environment mode. Use `sandbox` for testing, `production` for live payments.
+</ParamField>
+
+<ParamField path="timeout" type="number" default="45000">
+  Request timeout in milliseconds. Tola supports complex operations that may take longer.
+</ParamField>
+
+<ParamField path="retries" type="number" default="3">
+  Number of retry attempts for failed requests.
+</ParamField>
+
+<ParamField path="callbackUrl" type="string">
+  URL to receive transaction status callbacks and webhooks.
+</ParamField>
+
+### Advanced Configuration
+
+```typescript
+const tola = new Tola({
+  apiKey: process.env.TOLA_API_KEY!,
+  merchantId: process.env.TOLA_MERCHANT_ID!,
+  environment: 'production',
+  
+  // Extended timeouts for complex operations
+  timeout: 60000,
+  retries: 5,
+  retryDelay: 3000,
+  
+  // Callback configuration
+  callbackUrl: 'https://api.myapp.com/callbacks/tola',
+  webhookUrl: 'https://api.myapp.com/webhooks/tola',
+  webhookSecret: process.env.TOLA_WEBHOOK_SECRET,
+  
+  // Enterprise features
+  enableReconciliation: true,
+  enableDetailedReporting: true,
+  enableEscrowServices: true,
+  
+  // Rate limiting (enterprise-grade)
+  rateLimit: {
+    requests: 500,
+    window: 60000, // Per minute
+    burst: 100     // Burst capacity
+  },
+  
+  // Banking integration
+  bankingConfig: {
+    enableRTGS: true,
+    enableACH: true,
+    settlementAccount: process.env.TOLA_SETTLEMENT_ACCOUNT
+  },
+  
+  // Compliance and security
+  enableTwoFactorAuth: true,
+  enableAuditLogging: true,
+  complianceLevel: 'high',
+  
+  // Monitoring
+  logger: enterpriseLogger,
+  logLevel: 'info',
+  enableMetrics: true
+});
+```
+
+## Getting API Credentials
+
+### Sandbox Access
+
+Get started with Tola's feature-rich sandbox:
+
+<Steps>
+  <Step title="Business Registration">
+    Visit [business.tola.ug](https://business.tola.ug) and complete business registration
+  </Step>
+  
+  <Step title="Account Verification">
+    Upload business documents and complete verification process
+  </Step>
+  
+  <Step title="Sandbox Access">
+    Request sandbox access through the business portal
+  </Step>
+  
+  <Step title="Get Credentials">
+    ```bash
+    TOLA_API_KEY=tola_test_your_api_key_here
+    TOLA_MERCHANT_ID=merchant_test_your_id_here
+    ```
+  </Step>
+</Steps>
+
+### Production Onboarding
+
+Tola's enterprise onboarding process:
+
+<Accordion title="Enterprise Onboarding Process">
+  1. **Business Assessment** - Detailed business review and requirements analysis
+  2. **Compliance Review** - KYC/AML verification and risk assessment (5-10 business days)
+  3. **Technical Integration** - Dedicated integration support and testing
+  4. **Security Audit** - Comprehensive security and compliance audit
+  5. **Go-Live Certification** - Final approval and production access
+  6. **Ongoing Support** - Dedicated account management and technical support
+  
+  <Warning>
+    Tola's onboarding is more comprehensive than other providers, typically taking 2-3 weeks for full production access. This includes enhanced due diligence for enterprise features.
+  </Warning>
+</Accordion>
+
+## Usage Examples
+
+### Mobile Money Collection
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+import { Tola } from '@fundkit/tola';
+
+const tola = new Tola({
+  apiKey: process.env.TOLA_API_KEY!,
+  merchantId: process.env.TOLA_MERCHANT_ID!,
+  environment: 'sandbox'
+});
+
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [tola],
+  environment: 'sandbox'
+});
+
+// Standard mobile money payment
+const transaction = {
+  amount: 50000,                     // 500.00 UGX
+  currency: 'UGX',
+  operator: 'mtn',
+  accountNumber: '256779280949',
+  externalId: 'invoice_12345',
+  reason: 'Service subscription payment',
+  
+  // Additional Tola-specific metadata
+  metadata: {
+    customerName: 'John Doe',
+    serviceType: 'premium_subscription',
+    billingPeriod: 'monthly',
+    accountType: 'business'
+  }
+};
+
+try {
+  const result = await client.collection(transaction);
+  console.log('Payment initiated:', result);
+  
+  // Tola provides detailed response information
+  console.log('Transaction details:', {
+    provider: result.provider,
+    transactionId: result.data.transactionId,
+    reference: result.data.reference,
+    estimatedCompletion: result.data.estimatedCompletion,
+    fees: result.data.fees
+  });
+} catch (error) {
+  console.error('Payment failed:', error.message);
+}
+```
+
+### Bank Transfer Collection
+
+```typescript
+// Collect payment via bank transfer
+const bankTransfer = {
+  amount: 1000000,                   // 10,000.00 UGX
+  currency: 'UGX',
+  paymentMethod: 'bank_transfer',
+  accountNumber: 'ACC123456789',     // Bank account number
+  bankCode: 'STANBIC',               // Bank identifier
+  externalId: 'large_payment_001',
+  reason: 'Large service payment',
+  
+  // Bank-specific details
+  bankDetails: {
+    accountName: 'ACME Corporation Ltd',
+    bankName: 'Stanbic Bank Uganda',
+    branchCode: 'KAMPALA001',
+    swiftCode: 'SBICUGKX'
+  }
+};
+
+try {
+  const result = await tola.collection(bankTransfer);
+  console.log('Bank transfer initiated:', result);
+} catch (error) {
+  console.error('Bank transfer failed:', error.message);
+}
+```
+
+### Bulk Payment Processing
+
+```typescript
+// Process multiple payments efficiently
+async function processBulkPayments(payments: PaymentRequest[]) {
+  const bulkRequest = {
+    batchId: `batch_${Date.now()}`,
+    payments: payments.map((payment, index) => ({
+      sequenceNumber: index + 1,
+      amount: payment.amount,
+      currency: payment.currency,
+      operator: payment.operator,
+      accountNumber: payment.accountNumber,
+      externalId: payment.externalId,
+      reason: payment.reason,
+      metadata: payment.metadata
+    })),
+    
+    // Bulk processing options
+    processingMode: 'parallel',      // or 'sequential'
+    failurePolicy: 'continue',       // or 'stop_on_first_failure'
+    notificationUrl: 'https://api.myapp.com/bulk-notifications'
+  };
+  
+  try {
+    const result = await tola.bulkCollection(bulkRequest);
+    
+    console.log(`Bulk batch ${result.batchId} submitted`);
+    console.log(`${result.totalCount} payments queued`);
+    console.log(`Estimated completion: ${result.estimatedCompletion}`);
+    
+    return result;
+  } catch (error) {
+    console.error('Bulk processing failed:', error.message);
+    throw error;
+  }
+}
+
+// Monitor bulk processing status
+async function monitorBulkBatch(batchId: string) {
+  const status = await tola.getBulkBatchStatus(batchId);
+  
+  console.log(`Batch ${batchId} status:`, {
+    status: status.status,
+    processed: status.processedCount,
+    successful: status.successfulCount,
+    failed: status.failedCount,
+    progress: `${Math.round(status.progressPercentage)}%`
+  });
+  
+  return status;
+}
+```
+
+### Payout Operations
+
+```typescript
+// Send money to recipients
+const payout = {
+  amount: 75000,                     // 750.00 UGX
+  currency: 'UGX',
+  operator: 'airtel',
+  accountNumber: '256701234567',
+  externalId: 'commission_payout_456',
+  reason: 'Monthly commission payment',
+  
+  // Payout-specific details
+  recipientDetails: {
+    name: 'Jane Smith',
+    idNumber: 'NIN1234567890',
+    relationship: 'agent'
+  },
+  
+  // Compliance information
+  compliance: {
+    payoutReason: 'commission',
+    sourceOfFunds: 'business_revenue',
+    beneficiaryType: 'individual'
+  }
+};
+
+try {
+  const result = await tola.payout(payout);
+  console.log('Payout initiated:', result);
+} catch (error) {
+  console.error('Payout failed:', error.message);
+}
+```
+
+## Transaction Limits
+
+### Amount Limits by Payment Method
+
+<Tabs>
+  <Tab title="Mobile Money">
+    - **Minimum:** 500 UGX
+    - **Maximum:** 20,000,000 UGX (per transaction)
+    - **Daily limit:** 50,000,000 UGX (per merchant)
+    - **Monthly limit:** 500,000,000 UGX (per merchant)
+  </Tab>
+  
+  <Tab title="Bank Transfer">
+    - **Minimum:** 10,000 UGX
+    - **Maximum:** 1,000,000,000 UGX (per transaction)
+    - **Daily limit:** No limit (with proper authorization)
+    - **Settlement:** T+1 for standard, T+0 for premium
+  </Tab>
+  
+  <Tab title="Card Payments">
+    - **Minimum:** 1,000 UGX
+    - **Maximum:** 10,000,000 UGX (per transaction)
+    - **Daily limit:** 100,000,000 UGX (per merchant)
+    - **International:** USD 50,000 equivalent
+  </Tab>
+</Tabs>
+
+### Enterprise Limits
+
+- **API Requests:** 500 requests per minute (burstable to 1,000)
+- **Concurrent Operations:** 200 simultaneous transactions
+- **Bulk Processing:** 10,000 transactions per batch
+- **File Upload:** 100MB per reconciliation file
+
+## Advanced Features
+
+### Transaction Reconciliation
+
+```typescript
+// Generate reconciliation report
+async function generateReconciliationReport(date: string) {
+  const report = await tola.generateReconciliation({
+    date: date,                      // YYYY-MM-DD format
+    includeTransactions: true,
+    includeSettlements: true,
+    includeRefunds: true,
+    format: 'detailed'               // 'summary' or 'detailed'
+  });
+  
+  console.log('Reconciliation Report:', {
+    reportId: report.reportId,
+    totalTransactions: report.summary.totalTransactions,
+    totalAmount: report.summary.totalAmount,
+    totalFees: report.summary.totalFees,
+    netSettlement: report.summary.netSettlement,
+    downloadUrl: report.downloadUrl
+  });
+  
+  return report;
+}
+
+// Download reconciliation file
+async function downloadReconciliationFile(reportId: string) {
+  const fileBuffer = await tola.downloadReconciliationFile(reportId);
+  
+  // Save to file system
+  require('fs').writeFileSync(`reconciliation_${reportId}.xlsx`, fileBuffer);
+  
+  console.log(`Reconciliation file saved: reconciliation_${reportId}.xlsx`);
+}
+```
+
+### Escrow Services
+
+```typescript
+// Create escrow transaction
+const escrowTransaction = {
+  amount: 5000000,                   // 50,000.00 UGX
+  currency: 'UGX',
+  payerAccount: '256779280949',
+  payeeAccount: '256701234567',
+  externalId: 'escrow_property_sale_001',
+  reason: 'Property purchase escrow',
+  
+  // Escrow-specific configuration
+  escrowConfig: {
+    releaseConditions: ['buyer_confirmation', 'seller_delivery'],
+    timeoutDays: 30,                 // Auto-release after 30 days
+    arbitratorId: 'arbitrator_123',
+    requiresManualRelease: true
+  },
+  
+  // Milestone-based release
+  milestones: [
+    {
+      name: 'initial_deposit',
+      percentage: 20,
+      condition: 'automatic'
+    },
+    {
+      name: 'delivery_confirmation',
+      percentage: 60,
+      condition: 'buyer_approval'
+    },
+    {
+      name: 'final_payment',
+      percentage: 20,
+      condition: 'completion_certificate'
+    }
+  ]
+};
+
+try {
+  const escrow = await tola.createEscrow(escrowTransaction);
+  console.log('Escrow created:', escrow.escrowId);
+} catch (error) {
+  console.error('Escrow creation failed:', error.message);
+}
+
+// Release escrow funds
+async function releaseEscrowFunds(escrowId: string, milestoneId: string) {
+  const release = await tola.releaseEscrow({
+    escrowId: escrowId,
+    milestoneId: milestoneId,
+    releaseReason: 'milestone_completed',
+    approverSignature: 'digital_signature_hash'
+  });
+  
+  console.log('Escrow funds released:', release);
+}
+```
+
+### Detailed Analytics
+
+```typescript
+// Get comprehensive analytics
+async function getDetailedAnalytics(startDate: string, endDate: string) {
+  const analytics = await tola.getAnalytics({
+    startDate: startDate,
+    endDate: endDate,
+    groupBy: ['payment_method', 'currency', 'status'],
+    includeHourlyBreakdown: true,
+    includeGeoAnalytics: true,
+    includeCustomerSegmentation: true
+  });
+  
+  console.log('Payment Analytics:', {
+    overview: analytics.overview,
+    trends: analytics.trends,
+    performance: analytics.performance,
+    segmentation: analytics.customerSegmentation
+  });
+  
+  return analytics;
+}
+
+// Real-time dashboard metrics
+async function getDashboardMetrics() {
+  const metrics = await tola.getDashboardMetrics();
+  
+  console.log('Real-time Metrics:', {
+    transactionsToday: metrics.today.count,
+    volumeToday: metrics.today.volume,
+    successRate: metrics.today.successRate,
+    averageAmount: metrics.today.averageAmount,
+    topPaymentMethods: metrics.breakdown.paymentMethods,
+    recentFailures: metrics.recent.failures
+  });
+  
+  return metrics;
+}
+```
+
+## Error Handling
+
+### Tola-Specific Errors
+
+```typescript
+try {
+  const result = await client.collection(transaction);
+} catch (error) {
+  switch (error.code) {
+    case 'TOLA_INSUFFICIENT_BALANCE':
+      handleInsufficientBalance(error);
+      break;
+      
+    case 'TOLA_ACCOUNT_VERIFICATION_REQUIRED':
+      handleAccountVerification(error);
+      break;
+      
+    case 'TOLA_TRANSACTION_LIMIT_EXCEEDED':
+      handleLimitExceeded(error);
+      break;
+      
+    case 'TOLA_COMPLIANCE_CHECK_FAILED':
+      handleComplianceIssue(error);
+      break;
+      
+    case 'TOLA_SETTLEMENT_PENDING':
+      handleSettlementDelay(error);
+      break;
+      
+    case 'TOLA_ESCROW_CONDITION_NOT_MET':
+      handleEscrowCondition(error);
+      break;
+      
+    case 'TOLA_BANK_NETWORK_ERROR':
+      handleBankNetworkError(error);
+      break;
+      
+    default:
+      handleGenericError(error);
+  }
+}
+
+function handleComplianceIssue(error: TolaError) {
+  console.log('Compliance check failed:', error.details);
+  
+  // Show specific compliance requirements
+  if (error.details.requiredDocuments) {
+    showComplianceModal(error.details.requiredDocuments);
+  }
+  
+  // Provide guidance for resolution
+  showComplianceGuidance(error.details.complianceLevel);
+}
+
+function handleEscrowCondition(error: TolaError) {
+  console.log('Escrow condition not met:', error.details);
+  
+  // Show missing conditions
+  const missingConditions = error.details.missingConditions;
+  showEscrowStatus(error.details.escrowId, missingConditions);
+  
+  // Provide action items
+  showEscrowActionItems(missingConditions);
+}
+```
+
+## Webhooks & Callbacks
+
+### Enterprise Webhook Configuration
+
+```typescript
+const tola = new Tola({
+  apiKey: process.env.TOLA_API_KEY!,
+  merchantId: process.env.TOLA_MERCHANT_ID!,
+  
+  // Multiple webhook endpoints
+  webhookEndpoints: [
+    {
+      url: 'https://api.myapp.com/webhooks/tola/payments',
+      events: ['payment.completed', 'payment.failed'],
+      secret: process.env.TOLA_PAYMENT_WEBHOOK_SECRET
+    },
+    {
+      url: 'https://api.myapp.com/webhooks/tola/reconciliation',
+      events: ['reconciliation.ready', 'settlement.completed'],
+      secret: process.env.TOLA_RECON_WEBHOOK_SECRET
+    },
+    {
+      url: 'https://api.myapp.com/webhooks/tola/escrow',
+      events: ['escrow.created', 'escrow.released', 'escrow.disputed'],
+      secret: process.env.TOLA_ESCROW_WEBHOOK_SECRET
+    }
+  ]
+});
+```
+
+### Comprehensive Webhook Handler
+
+```typescript
+import express from 'express';
+import { verifyTolaWebhook } from '@fundkit/tola';
+
+const app = express();
+app.use(express.raw({ type: 'application/json' }));
+
+app.post('/webhooks/tola/:endpoint', async (req, res) => {
+  const endpoint = req.params.endpoint;
+  const signature = req.headers['x-tola-signature'];
+  const timestamp = req.headers['x-tola-timestamp'];
+  const payload = req.body;
+  
+  // Verify webhook authenticity
+  const isValid = verifyTolaWebhook(
+    payload, 
+    signature, 
+    timestamp, 
+    getWebhookSecret(endpoint)
+  );
+  
+  if (!isValid) {
+    return res.status(400).json({ error: 'Invalid webhook signature' });
+  }
+  
+  const event = JSON.parse(payload.toString());
+  
+  try {
+    await processTolaWebhook(endpoint, event);
+    res.status(200).json({ received: true, processed: true });
+  } catch (error) {
+    console.error('Webhook processing failed:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+
+async function processTolaWebhook(endpoint: string, event: any) {
+  switch (`${endpoint}.${event.type}`) {
+    case 'payments.payment.completed':
+      await handlePaymentCompleted(event.data);
+      break;
+      
+    case 'reconciliation.reconciliation.ready':
+      await handleReconciliationReady(event.data);
+      break;
+      
+    case 'escrow.escrow.released':
+      await handleEscrowReleased(event.data);
+      break;
+      
+    case 'payments.bulk.batch.completed':
+      await handleBulkBatchCompleted(event.data);
+      break;
+      
+    default:
+      console.log('Unhandled webhook event:', endpoint, event.type);
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card icon="shield-check" title="Enterprise Security">
+    ```typescript
+    // Good: Enable all security features
+    const tola = new Tola({
+      apiKey: process.env.TOLA_API_KEY!,
+      merchantId: process.env.TOLA_MERCHANT_ID!,
+      enableTwoFactorAuth: true,
+      enableAuditLogging: true,
+      complianceLevel: 'high'
+    });
+    ```
+  </Card>
+  
+  <Card icon="database" title="Use Reconciliation">
+    ```typescript
+    // Good: Regular reconciliation
+    setInterval(async () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      await generateReconciliationReport(
+        yesterday.toISOString().split('T')[0]
+      );
+    }, 24 * 60 * 60 * 1000); // Daily
+    ```
+  </Card>
+  
+  <Card icon="chart-line" title="Monitor Performance">
+    ```typescript
+    // Good: Real-time monitoring
+    const metrics = await tola.getDashboardMetrics();
+    
+    if (metrics.today.successRate < 0.95) {
+      await alertOpsTeam('Low success rate detected');
+    }
+    ```
+  </Card>
+  
+  <Card icon="file-check" title="Detailed Metadata">
+    ```typescript
+    // Good: Rich transaction metadata
+    const transaction = {
+      // ... basic fields
+      metadata: {
+        customerSegment: 'enterprise',
+        salesRep: 'john.doe',
+        contractId: 'CONTRACT_2024_001',
+        departmentCode: 'SALES_UG'
+      }
+    };
+    ```
+  </Card>
+</CardGroup>
+
+## Support & Resources
+
+<CardGroup cols={2}>
+  <Card title="Tola Business Portal" icon="building" href="https://business.tola.ug">
+    Manage your merchant account and settings
+  </Card>
+  
+  <Card title="Enterprise Documentation" icon="book" href="https://docs.tola.ug/enterprise">
+    Comprehensive enterprise API documentation
+  </Card>
+  
+  <Card title="Status & Monitoring" icon="chart-line" href="https://status.tola.ug">
+    Real-time service status and performance
+  </Card>
+  
+  <Card title="Enterprise Support" icon="headset" href="mailto:enterprise@tola.ug">
+    Dedicated enterprise support team
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Multi-Provider Strategy" icon="layer-group" href="/core/providers">
+  Combine Tola with other providers for redundancy
+</Card>
+
+<Card title="Advanced Features" icon="cog" href="/advanced/webhooks">
+  Implement webhooks and real-time updates
+</Card>
+
+<Card title="Enterprise Deployment" icon="building" href="/advanced/production">
+  Deploy Tola for enterprise production use
+</Card>
+
+<Card title="API Reference" icon="code" href="/api-reference/providers/tola">
+  Complete Tola API documentation
+</Card>
+
+</CardGroup>

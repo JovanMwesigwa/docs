@@ -1,0 +1,556 @@
+---
+title: "EasyPay Provider API"
+description: "Complete API reference for the EasyPay payment provider in FundKit"
+---
+
+# EasyPay Provider API Reference
+
+EasyPay is a fast, Uganda-focused mobile money provider that specializes in MTN and Airtel Money transactions. Known for its quick processing times and high success rates, EasyPay is optimized for the Ugandan market.
+
+## Provider Configuration
+
+### Basic Configuration
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+
+const client = new PaymentClient({
+  easypay: {
+    apiKey: 'your-easypay-api-key',
+    environment: 'sandbox' // or 'production'
+  }
+});
+```
+
+### Advanced Configuration
+
+```typescript
+const client = new PaymentClient({
+  easypay: {
+    apiKey: 'your-easypay-api-key',
+    environment: 'production',
+    baseUrl: 'https://api.easypay.ug',     // Custom endpoint
+    timeout: 25000,                        // 25 second timeout
+    retries: 2,                           // Retry attempts
+    webhookSecret: 'your-webhook-secret',  // For webhook verification
+    enableInstantConfirmation: true       // Enable instant confirmations
+  }
+});
+```
+
+## Configuration Options
+
+### `EasyPayConfig` Interface
+
+```typescript
+interface EasyPayConfig {
+  apiKey: string;           // Required: Your EasyPay API key
+  environment?: 'sandbox' | 'production'; // Default: 'sandbox'
+  baseUrl?: string;         // Custom API endpoint
+  timeout?: number;         // Request timeout in milliseconds
+  retries?: number;         // Number of retry attempts
+  webhookSecret?: string;   // Secret for webhook verification
+  enableInstantConfirmation?: boolean; // Enable instant confirmations
+  defaultNetwork?: 'MTN' | 'AIRTEL';  // Preferred network
+}
+```
+
+## Supported Features
+
+### Uganda-Focused Support
+
+| Network | Currency | Min Amount | Max Amount | Processing Time |
+|---------|----------|------------|------------|-----------------|
+| MTN Mobile Money | UGX | 500 (5 UGX) | 5,000,000 (50,000 UGX) | 5-15 seconds |
+| Airtel Money | UGX | 500 (5 UGX) | 3,000,000 (30,000 UGX) | 10-30 seconds |
+
+### Phone Number Formats
+
+```typescript
+// Uganda MTN numbers
+const mtnNumbers = [
+  '+256701234567',  // MTN (70x)
+  '+256751234567',  // MTN (75x)
+  '+256761234567',  // MTN (76x)
+  '+256771234567',  // MTN (77x)
+  '+256781234567'   // MTN (78x)
+];
+
+// Uganda Airtel numbers
+const airtelNumbers = [
+  '+256702234567',  // Airtel (70x)
+  '+256742234567',  // Airtel (74x)
+  '+256782234567',  // Airtel (78x)
+  '+256752234567'   // Airtel (75x)
+];
+```
+
+## EasyPay-Specific Methods
+
+### Direct Provider Access
+
+```typescript
+import { EasyPayProvider } from '@fundkit/easypay';
+
+const easypay = new EasyPayProvider({
+  apiKey: 'your-api-key',
+  environment: 'sandbox'
+});
+
+// Direct collection
+const result = await easypay.collect({
+  amount: 10000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Payment for order #12345'
+});
+```
+
+### Network Optimization
+
+```typescript
+// Force specific network
+const result = await easypay.collect({
+  amount: 10000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Payment for order #12345',
+  preferredNetwork: 'MTN' // or 'AIRTEL'
+});
+```
+
+### Fast Processing
+
+```typescript
+// Enable instant confirmation (if available)
+const result = await easypay.collect({
+  amount: 10000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Payment for order #12345',
+  instantConfirmation: true
+});
+```
+
+## Response Formats
+
+### EasyPay Collection Response
+
+```typescript
+interface EasyPayCollectionResponse extends CollectionResponse {
+  // Standard fields
+  transactionId: string;
+  status: TransactionStatus;
+  amount: number;
+  currency: string;
+  phoneNumber: string;
+  reason: string;
+  
+  // EasyPay-specific fields
+  providerData: {
+    easypayTransactionId: string;    // EasyPay's internal ID
+    networkOperator: 'MTN' | 'AIRTEL'; // Detected network
+    networkTransactionId?: string;    // Network confirmation ID
+    processingStage: string;          // Current processing stage
+    instantConfirmation: boolean;     // Whether instant confirmation is enabled
+    estimatedCompletion: string;      // Estimated completion time
+    networkFee: number;              // Network transaction fee
+    processingFee: number;           // EasyPay processing fee
+  };
+}
+```
+
+### Status-Specific Data
+
+```typescript
+// Pending status
+{
+  status: 'pending',
+  providerData: {
+    processingStage: 'initiated',
+    estimatedCompletion: '2024-01-15T10:02:00Z',
+    instantConfirmation: false
+  }
+}
+
+// Processing status
+{
+  status: 'processing',
+  providerData: {
+    processingStage: 'network_processing',
+    networkTransactionId: 'MTN789012345',
+    instantConfirmation: true
+  }
+}
+
+// Completed status
+{
+  status: 'completed',
+  providerData: {
+    processingStage: 'completed',
+    networkTransactionId: 'MTN789012345',
+    networkFee: 200,
+    processingFee: 100,
+    instantConfirmation: true
+  }
+}
+
+// Failed status
+{
+  status: 'failed',
+  providerData: {
+    processingStage: 'failed',
+    failureCode: 'NETWORK_ERROR',
+    failureMessage: 'Network temporarily unavailable',
+    retryable: true
+  }
+}
+```
+
+## Error Codes
+
+### EasyPay-Specific Errors
+
+```typescript
+// Network temporarily down
+{
+  name: 'ProviderError',
+  code: 'NETWORK_UNAVAILABLE',
+  message: 'MTN network temporarily unavailable',
+  provider: 'easypay',
+  details: {
+    network: 'MTN',
+    estimatedRestoration: '2024-01-15T11:00:00Z',
+    retryable: true
+  }
+}
+
+// Customer account issues
+{
+  name: 'ProviderError',
+  code: 'CUSTOMER_ACCOUNT_BLOCKED',
+  message: 'Customer account is temporarily blocked',
+  provider: 'easypay',
+  details: {
+    phoneNumber: '+256701234567',
+    blockReason: 'suspected_fraud',
+    contactSupport: true
+  }
+}
+
+// Transaction limit exceeded
+{
+  name: 'ProviderError',
+  code: 'TRANSACTION_LIMIT_EXCEEDED',
+  message: 'Transaction amount exceeds daily limit',
+  provider: 'easypay',
+  details: {
+    dailyLimit: 1000000,
+    currentUsage: 800000,
+    requestedAmount: 300000,
+    resetTime: '2024-01-16T00:00:00Z'
+  }
+}
+
+// Fast processing unavailable
+{
+  name: 'ProviderError',
+  code: 'INSTANT_CONFIRMATION_UNAVAILABLE',
+  message: 'Instant confirmation not available for this transaction',
+  provider: 'easypay',
+  details: {
+    reason: 'network_maintenance',
+    fallbackMode: 'standard_processing'
+  }
+}
+```
+
+## Webhook Integration
+
+### EasyPay Webhook Format
+
+```typescript
+interface EasyPayWebhook {
+  event: 'transaction.updated';
+  transactionId: string;
+  easypayTransactionId: string;
+  status: TransactionStatus;
+  timestamp: string;
+  data: {
+    amount: number;
+    currency: string;
+    phoneNumber: string;
+    networkOperator: 'MTN' | 'AIRTEL';
+    networkTransactionId?: string;
+    processingStage: string;
+    instantConfirmation: boolean;
+    fees: {
+      networkFee: number;
+      processingFee: number;
+      totalFee: number;
+    };
+    timing: {
+      initiatedAt: string;
+      processedAt?: string;
+      completedAt?: string;
+      processingDuration?: number; // in milliseconds
+    };
+  };
+  signature: string; // HMAC-SHA256 signature
+}
+```
+
+### Webhook Verification
+
+```typescript
+import crypto from 'crypto';
+
+function verifyEasyPayWebhook(
+  payload: string,
+  signature: string,
+  secret: string
+): boolean {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+
+// Express.js webhook handler
+app.post('/webhook/easypay', (req, res) => {
+  const signature = req.headers['x-easypay-signature'] as string;
+  const payload = JSON.stringify(req.body);
+  
+  if (!verifyEasyPayWebhook(payload, signature, process.env.EASYPAY_WEBHOOK_SECRET!)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const webhook: EasyPayWebhook = req.body;
+  console.log('EasyPay webhook received:', webhook);
+  
+  // Log processing duration for fast transactions
+  if (webhook.data.processingDuration) {
+    console.log(`Transaction completed in ${webhook.data.processingDuration}ms`);
+  }
+  
+  res.json({ received: true });
+});
+```
+
+## Advanced Features
+
+### Priority Processing
+
+```typescript
+// Request priority processing for urgent transactions
+const urgentPayment = await easypay.collect({
+  amount: 100000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Emergency payment',
+  priority: 'high' // or 'normal', 'low'
+});
+```
+
+### Transaction Batching
+
+```typescript
+// Process multiple transactions efficiently
+const batchResults = await easypay.batchCollect([
+  {
+    amount: 10000,
+    currency: 'UGX',
+    phoneNumber: '+256701234567',
+    reason: 'Payment 1'
+  },
+  {
+    amount: 20000,
+    currency: 'UGX',
+    phoneNumber: '+256702234567',
+    reason: 'Payment 2'
+  }
+]);
+
+console.log('Batch processing results:', batchResults);
+```
+
+### Network Status Monitoring
+
+```typescript
+// Check network status before processing
+const networkStatus = await easypay.getNetworkStatus();
+console.log(networkStatus);
+// {
+//   MTN: {
+//     status: 'operational',
+//     responseTime: 850, // milliseconds
+//     successRate: 0.98,
+//     lastUpdated: '2024-01-15T10:00:00Z'
+//   },
+//   AIRTEL: {
+//     status: 'degraded',
+//     responseTime: 2500,
+//     successRate: 0.85,
+//     lastUpdated: '2024-01-15T10:00:00Z'
+//   }
+// }
+```
+
+## Testing with EasyPay
+
+### Sandbox Environment
+
+```typescript
+// Sandbox configuration
+const sandboxClient = new PaymentClient({
+  easypay: {
+    apiKey: 'sk_sandbox_easypay_test_key',
+    environment: 'sandbox',
+    baseUrl: 'https://sandbox.easypay.ug'
+  }
+});
+```
+
+### Test Phone Numbers
+
+```typescript
+// EasyPay sandbox test numbers
+const testNumbers = {
+  // MTN test numbers
+  mtnSuccess: '+256700000101',      // Always successful
+  mtnFailure: '+256700000102',      // Always fails
+  mtnTimeout: '+256700000103',      // Times out
+  mtnInstant: '+256700000104',      // Instant confirmation
+  
+  // Airtel test numbers
+  airtelSuccess: '+256700000201',   // Always successful
+  airtelFailure: '+256700000202',   // Insufficient funds
+  airtelSlow: '+256700000203',      // Slow processing
+  
+  // Error simulation
+  networkError: '+256700000301',    // Network error
+  maintenance: '+256700000302'      // Network maintenance
+};
+```
+
+### Testing Scenarios
+
+```typescript
+// Test fast processing
+const fastTest = await sandboxClient.collect({
+  amount: 10000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.mtnInstant,
+  reason: 'Test fast processing',
+  instantConfirmation: true
+});
+
+// Test slow processing
+const slowTest = await sandboxClient.collect({
+  amount: 25000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.airtelSlow,
+  reason: 'Test slow processing'
+});
+
+// Test error scenarios
+const errorTest = await sandboxClient.collect({
+  amount: 50000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.networkError,
+  reason: 'Test network error'
+});
+```
+
+## Performance Features
+
+### Response Time Optimization
+
+```typescript
+// EasyPay provides response time metrics
+const result = await easypay.collect(request);
+
+console.log('Performance metrics:', result.providerData.metrics);
+// {
+//   networkResponseTime: 850,      // milliseconds
+//   totalProcessingTime: 1250,     // milliseconds
+//   instantConfirmation: true,
+//   networkEfficiency: 0.95
+// }
+```
+
+### Caching and Optimization
+
+```typescript
+// Enable response caching for frequent operations
+const optimizedEasyPay = new EasyPayProvider({
+  apiKey: 'your-api-key',
+  environment: 'production',
+  enableCaching: true,
+  cacheTimeout: 300000, // 5 minutes
+  optimizeForSpeed: true
+});
+```
+
+## Rate Limits
+
+### API Rate Limits
+
+| Environment | Requests per minute | Concurrent requests | Burst limit |
+|-------------|-------------------|-------------------|-------------|
+| Sandbox | 200 | 20 | 50 |
+| Production | 2000 | 100 | 200 |
+
+### Handling Rate Limits
+
+```typescript
+import { RateLimiter } from '@fundkit/core/utils';
+
+const rateLimiter = new RateLimiter({
+  requests: 100,
+  window: 60000, // 1 minute
+  provider: 'easypay'
+});
+
+const collectWithRateLimit = async (request) => {
+  await rateLimiter.waitForAvailability();
+  return await easypay.collect(request);
+};
+```
+
+## Best Practices
+
+### Performance Optimization
+
+1. **Use Instant Confirmation**: Enable for time-critical transactions
+2. **Monitor Network Status**: Check network health before processing
+3. **Batch Operations**: Use batch processing for multiple transactions
+4. **Cache Network Detection**: Cache network detection results
+5. **Optimize Timeout Settings**: Set appropriate timeouts for Uganda networks
+
+### Error Handling
+
+1. **Implement Retries**: Retry failed transactions with exponential backoff
+2. **Handle Network Outages**: Gracefully handle temporary network issues
+3. **Monitor Success Rates**: Track success rates by network
+4. **Use Fallback Logic**: Implement fallback to other providers if needed
+
+### Security
+
+1. **Secure API Keys**: Store API keys securely in environment variables
+2. **Validate Webhooks**: Always verify webhook signatures
+3. **Log Transactions**: Maintain detailed logs for audit and debugging
+4. **Rate Limiting**: Implement client-side rate limiting
+
+### Integration Tips
+
+1. **Test Both Networks**: Test thoroughly with both MTN and Airtel
+2. **Handle Peak Times**: Account for network congestion during peak hours
+3. **User Experience**: Provide clear status updates during processing
+4. **Compliance**: Follow Uganda's financial regulations and guidelines
+5. **Customer Support**: Implement clear error messages and support channels

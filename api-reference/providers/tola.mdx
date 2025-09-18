@@ -1,0 +1,557 @@
+---
+title: "Tola Provider API"
+description: "Complete API reference for the Tola payment provider in FundKit"
+---
+
+# Tola Provider API Reference
+
+Tola is an enterprise-grade payment provider that offers advanced features including banking integration, multi-currency support, and sophisticated fraud detection. Tola supports Uganda (UGX) and Rwanda (RWF) with plans for regional expansion.
+
+## Provider Configuration
+
+### Basic Configuration
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+
+const client = new PaymentClient({
+  tola: {
+    apiKey: 'your-tola-api-key',
+    environment: 'sandbox' // or 'production'
+  }
+});
+```
+
+### Advanced Configuration
+
+```typescript
+const client = new PaymentClient({
+  tola: {
+    apiKey: 'your-tola-api-key',
+    environment: 'production',
+    baseUrl: 'https://api.tola.ug',         // Custom endpoint
+    timeout: 45000,                         // 45 second timeout
+    retries: 3,                            // Retry attempts
+    webhookSecret: 'your-webhook-secret',   // For webhook verification
+    enableFraudDetection: true,            // Enable fraud detection
+    settlementAccount: 'your-settlement-id' // Banking settlement account
+  }
+});
+```
+
+## Configuration Options
+
+### `TolaConfig` Interface
+
+```typescript
+interface TolaConfig {
+  apiKey: string;           // Required: Your Tola API key
+  environment?: 'sandbox' | 'production'; // Default: 'sandbox'
+  baseUrl?: string;         // Custom API endpoint
+  timeout?: number;         // Request timeout in milliseconds
+  retries?: number;         // Number of retry attempts
+  webhookSecret?: string;   // Secret for webhook verification
+  enableFraudDetection?: boolean; // Enable fraud detection
+  settlementAccount?: string; // Banking settlement account ID
+  defaultCurrency?: 'UGX' | 'RWF'; // Default currency
+  riskProfile?: 'low' | 'medium' | 'high'; // Risk tolerance
+}
+```
+
+## Supported Features
+
+### Multi-Country & Currency Support
+
+| Country | Currency | Networks | Min Amount | Max Amount | Settlement |
+|---------|----------|----------|------------|------------|------------|
+| Uganda | UGX | MTN, Airtel | 1,000 (10 UGX) | 20,000,000 (200,000 UGX) | Same day |
+| Rwanda | RWF | MTN, Airtel | 100 (1 RWF) | 2,000,000 (20,000 RWF) | Same day |
+
+### Phone Number Formats
+
+```typescript
+// Uganda numbers
+const ugandaNumbers = [
+  '+256701234567',  // MTN
+  '+256751234567',  // MTN
+  '+256782234567',  // Airtel
+  '+256702234567'   // Airtel
+];
+
+// Rwanda numbers
+const rwandaNumbers = [
+  '+250788123456',  // MTN Rwanda
+  '+250738123456',  // Airtel Rwanda
+  '+250728123456'   // Tigo Rwanda
+];
+```
+
+## Tola-Specific Methods
+
+### Direct Provider Access
+
+```typescript
+import { TolaProvider } from '@fundkit/tola';
+
+const tola = new TolaProvider({
+  apiKey: 'your-api-key',
+  environment: 'sandbox'
+});
+
+// Direct collection
+const result = await tola.collect({
+  amount: 50000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Payment for order #12345'
+});
+```
+
+### Banking Integration
+
+```typescript
+// Create collection with banking settlement
+const result = await tola.collect({
+  amount: 100000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Invoice payment',
+  settlementAccount: 'bank-acc-12345',
+  settlementSchedule: 'immediate' // or 'daily', 'weekly'
+});
+```
+
+### Fraud Detection
+
+```typescript
+// Collection with fraud detection parameters
+const result = await tola.collect({
+  amount: 500000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Large purchase',
+  fraudCheck: {
+    customerProfile: {
+      registrationDate: '2023-01-01',
+      verificationLevel: 'verified',
+      riskScore: 0.2
+    },
+    transactionContext: {
+      deviceId: 'device-abc123',
+      ipAddress: '192.168.1.1',
+      userAgent: 'Mozilla/5.0...',
+      location: { lat: 0.3476, lng: 32.5825 } // Kampala coordinates
+    }
+  }
+});
+```
+
+## Response Formats
+
+### Tola Collection Response
+
+```typescript
+interface TolaCollectionResponse extends CollectionResponse {
+  // Standard fields
+  transactionId: string;
+  status: TransactionStatus;
+  amount: number;
+  currency: string;
+  phoneNumber: string;
+  reason: string;
+  
+  // Tola-specific fields
+  providerData: {
+    tolaTransactionId: string;       // Tola's internal ID
+    bankingReference?: string;       // Banking system reference
+    networkOperator: string;         // Mobile network operator
+    settlementStatus: string;        // Settlement processing status
+    fraudScore?: number;             // Fraud risk score (0-1)
+    fraudDecision: string;           // 'approved', 'review', 'declined'
+    processingStage: string;         // Current processing stage
+    estimatedSettlement?: string;    // Estimated settlement time
+    fees: {
+      networkFee: number;           // Network transaction fee
+      processingFee: number;        // Tola processing fee
+      bankingFee?: number;          // Banking/settlement fee
+      totalFee: number;             // Total fees
+    };
+    banking?: {
+      settlementAccount: string;    // Settlement account
+      settlementSchedule: string;   // Settlement schedule
+      settlementReference?: string; // Bank settlement reference
+    };
+  };
+}
+```
+
+### Status-Specific Data
+
+```typescript
+// Pending status with fraud check
+{
+  status: 'pending',
+  providerData: {
+    processingStage: 'fraud_analysis',
+    fraudScore: 0.15,
+    fraudDecision: 'approved',
+    estimatedCompletion: '2024-01-15T10:05:00Z'
+  }
+}
+
+// Processing with banking
+{
+  status: 'processing',
+  providerData: {
+    processingStage: 'network_confirmation',
+    bankingReference: 'BANK789012',
+    settlementStatus: 'pending'
+  }
+}
+
+// Completed with settlement
+{
+  status: 'completed',
+  providerData: {
+    processingStage: 'completed',
+    settlementStatus: 'settled',
+    banking: {
+      settlementAccount: 'bank-acc-12345',
+      settlementReference: 'SETT123456789',
+      settlementSchedule: 'immediate'
+    },
+    fees: {
+      networkFee: 300,
+      processingFee: 150,
+      bankingFee: 50,
+      totalFee: 500
+    }
+  }
+}
+
+// Review required (fraud)
+{
+  status: 'pending',
+  providerData: {
+    processingStage: 'manual_review',
+    fraudScore: 0.85,
+    fraudDecision: 'review',
+    reviewReason: 'high_value_transaction',
+    reviewEstimate: '2024-01-15T14:00:00Z'
+  }
+}
+```
+
+## Error Codes
+
+### Tola-Specific Errors
+
+```typescript
+// Fraud detection blocked
+{
+  name: 'ProviderError',
+  code: 'FRAUD_DETECTION_BLOCKED',
+  message: 'Transaction blocked by fraud detection',
+  provider: 'tola',
+  details: {
+    fraudScore: 0.95,
+    riskFactors: ['high_amount', 'unusual_location', 'new_device'],
+    reviewOptions: ['manual_review', 'additional_verification']
+  }
+}
+
+// Banking integration error
+{
+  name: 'ProviderError',
+  code: 'BANKING_UNAVAILABLE',
+  message: 'Banking service temporarily unavailable',
+  provider: 'tola',
+  details: {
+    bankingSystem: 'core_banking',
+    estimatedRestoration: '2024-01-15T12:00:00Z',
+    fallbackAvailable: true
+  }
+}
+
+// Settlement account error
+{
+  name: 'ProviderError',
+  code: 'INVALID_SETTLEMENT_ACCOUNT',
+  message: 'Settlement account not found or inactive',
+  provider: 'tola',
+  details: {
+    accountId: 'bank-acc-invalid',
+    accountStatus: 'suspended',
+    contactSupport: true
+  }
+}
+
+// Cross-border restrictions
+{
+  name: 'ProviderError',
+  code: 'CROSS_BORDER_RESTRICTED',
+  message: 'Cross-border transaction not permitted',
+  provider: 'tola',
+  details: {
+    sourceCountry: 'UG',
+    targetCountry: 'KE',
+    requiredLicense: 'money_transfer_license',
+    alternativeProviders: ['honeycoin']
+  }
+}
+```
+
+## Webhook Integration
+
+### Tola Webhook Format
+
+```typescript
+interface TolaWebhook {
+  event: 'transaction.updated' | 'settlement.completed' | 'fraud.review_required';
+  transactionId: string;
+  tolaTransactionId: string;
+  status: TransactionStatus;
+  timestamp: string;
+  data: {
+    amount: number;
+    currency: string;
+    phoneNumber: string;
+    networkOperator: string;
+    processingStage: string;
+    fraudScore?: number;
+    fraudDecision: string;
+    fees: {
+      networkFee: number;
+      processingFee: number;
+      bankingFee?: number;
+      totalFee: number;
+    };
+    banking?: {
+      settlementAccount: string;
+      settlementStatus: string;
+      settlementReference?: string;
+      settlementAmount?: number;
+    };
+    compliance?: {
+      amlCheck: boolean;
+      kycStatus: string;
+      sanctionsCheck: boolean;
+    };
+  };
+  signature: string; // HMAC-SHA256 signature
+}
+```
+
+### Advanced Webhook Events
+
+```typescript
+// Settlement completion webhook
+interface SettlementWebhook extends TolaWebhook {
+  event: 'settlement.completed';
+  settlementData: {
+    settlementId: string;
+    settlementAmount: number;
+    settlementFee: number;
+    netAmount: number;
+    settlementDate: string;
+    bankReference: string;
+    transactions: string[]; // Transaction IDs in settlement
+  };
+}
+
+// Fraud review webhook
+interface FraudReviewWebhook extends TolaWebhook {
+  event: 'fraud.review_required';
+  reviewData: {
+    fraudScore: number;
+    riskFactors: string[];
+    requiredActions: string[];
+    reviewDeadline: string;
+    escalationLevel: 'low' | 'medium' | 'high';
+  };
+}
+```
+
+## Advanced Features
+
+### Multi-Currency Collections
+
+```typescript
+// Cross-border payment
+const crossBorderPayment = await tola.collect({
+  amount: 50000,
+  currency: 'RWF',
+  phoneNumber: '+250788123456',
+  reason: 'Cross-border payment',
+  exchangeRate: 'market', // or specific rate
+  settlementCurrency: 'UGX'
+});
+```
+
+### Batch Processing with Banking
+
+```typescript
+// Enterprise batch processing
+const batchResults = await tola.batchCollect([
+  {
+    amount: 100000,
+    currency: 'UGX',
+    phoneNumber: '+256701234567',
+    reason: 'Salary payment 1',
+    settlementAccount: 'payroll-account'
+  },
+  {
+    amount: 120000,
+    currency: 'UGX',
+    phoneNumber: '+256702234567',
+    reason: 'Salary payment 2',
+    settlementAccount: 'payroll-account'
+  }
+], {
+  batchReference: 'payroll-2024-01',
+  settlementSchedule: 'daily'
+});
+```
+
+### Compliance Features
+
+```typescript
+// Transaction with compliance checks
+const compliancePayment = await tola.collect({
+  amount: 1000000, // Large amount requiring compliance
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Business transaction',
+  compliance: {
+    customerDueDiligence: true,
+    sourceOfFunds: 'business_revenue',
+    beneficiaryVerification: true,
+    transactionPurpose: 'trade_settlement'
+  }
+});
+```
+
+## Testing with Tola
+
+### Sandbox Environment
+
+```typescript
+// Sandbox configuration with banking simulation
+const sandboxClient = new PaymentClient({
+  tola: {
+    apiKey: 'sk_sandbox_tola_test_key',
+    environment: 'sandbox',
+    baseUrl: 'https://sandbox-api.tola.ug',
+    enableFraudDetection: true,
+    settlementAccount: 'sandbox-bank-account'
+  }
+});
+```
+
+### Test Phone Numbers
+
+```typescript
+// Tola sandbox test numbers
+const testNumbers = {
+  // Uganda test numbers
+  ugandaSuccess: '+256700000301',      // Always successful
+  ugandaFraud: '+256700000302',        // Triggers fraud review
+  ugandaBanking: '+256700000303',      // Banking integration test
+  ugandaFailed: '+256700000304',       // Payment failure
+  
+  // Rwanda test numbers
+  rwandaSuccess: '+250700000301',      // Always successful
+  rwandaCrossBorder: '+250700000302',  // Cross-border test
+  rwandaCompliance: '+250700000303',   // Compliance checks
+  
+  // Special scenarios
+  highRisk: '+256700000401',           // High fraud score
+  manualReview: '+256700000402',       // Requires manual review
+  bankingError: '+256700000403'        // Banking system error
+};
+```
+
+### Testing Scenarios
+
+```typescript
+// Test fraud detection
+const fraudTest = await sandboxClient.collect({
+  amount: 2000000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.ugandaFraud,
+  reason: 'High-value test transaction'
+});
+
+// Test banking integration
+const bankingTest = await sandboxClient.collect({
+  amount: 100000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.ugandaBanking,
+  reason: 'Banking integration test',
+  settlementAccount: 'test-bank-account'
+});
+
+// Test compliance features
+const complianceTest = await sandboxClient.collect({
+  amount: 5000000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.rwandaCompliance,
+  reason: 'Compliance test transaction'
+});
+```
+
+## Rate Limits
+
+### API Rate Limits
+
+| Environment | Requests per minute | Concurrent requests | Batch size |
+|-------------|-------------------|-------------------|------------|
+| Sandbox | 300 | 30 | 100 |
+| Production | 3000 | 150 | 1000 |
+
+### Enterprise Rate Limits
+
+```typescript
+// Enterprise customers get higher limits
+const enterpriseRateLimits = {
+  requestsPerMinute: 10000,
+  concurrentRequests: 500,
+  batchSize: 5000,
+  priorityProcessing: true
+};
+```
+
+## Best Practices
+
+### Fraud Prevention
+
+1. **Implement Device Fingerprinting**: Track device characteristics
+2. **Use Velocity Checks**: Monitor transaction frequency and amounts
+3. **Customer Profiling**: Build comprehensive customer risk profiles
+4. **Real-time Monitoring**: Monitor transactions in real-time
+5. **Manual Review Process**: Implement efficient manual review workflows
+
+### Banking Integration
+
+1. **Settlement Scheduling**: Optimize settlement schedules for cash flow
+2. **Reconciliation**: Implement robust reconciliation processes
+3. **Account Management**: Properly manage multiple settlement accounts
+4. **Compliance Monitoring**: Stay updated with banking regulations
+5. **Backup Procedures**: Have fallback procedures for banking outages
+
+### Enterprise Features
+
+1. **Batch Processing**: Use batch operations for efficiency
+2. **Multi-Currency**: Handle currency conversion carefully
+3. **Reporting**: Implement comprehensive transaction reporting
+4. **Audit Trails**: Maintain detailed audit trails
+5. **SLA Monitoring**: Monitor and maintain service level agreements
+
+### Security & Compliance
+
+1. **Data Protection**: Implement strong data protection measures
+2. **Access Control**: Use role-based access control
+3. **Encryption**: Encrypt sensitive data in transit and at rest
+4. **Audit Logging**: Maintain comprehensive audit logs
+5. **Regulatory Compliance**: Stay compliant with financial regulations
+6. **Incident Response**: Have procedures for security incidents

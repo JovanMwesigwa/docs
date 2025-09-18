@@ -1,0 +1,714 @@
+---
+title: "Error Handling"
+description: "Comprehensive guide to handling errors in FundKit applications"
+---
+
+## Overview
+
+FundKit provides a robust error handling system that converts provider-specific errors into standardized, developer-friendly error objects. This makes it easier to build resilient payment applications that gracefully handle various failure scenarios.
+
+<Info>
+  FundKit's error engine removes noisy stack traces and provides structured error information with actionable details, making debugging and user experience much better.
+</Info>
+
+## Error Structure
+
+### FundKitError Interface
+
+All FundKit errors follow a consistent structure:
+
+```typescript
+interface FundKitError extends Error {
+  name: string;                      // Error type name
+  code: string;                      // Machine-readable error code
+  message: string;                   // Human-readable error message
+  details?: any;                     // Additional error details
+  context?: Record<string, any>;     // Context information
+  provider?: string;                 // Which provider caused the error
+  transactionId?: string;            // Transaction ID if applicable
+  canRetry?: boolean;                // Whether the operation can be retried
+  retryAfter?: number;               // Seconds to wait before retry
+}
+```
+
+### Example Error
+
+```typescript
+{
+  name: 'PaymentError',
+  code: 'INSUFFICIENT_FUNDS',
+  message: 'Customer has insufficient balance to complete this transaction',
+  details: {
+    availableBalance: 2000,
+    requestedAmount: 5000,
+    shortfall: 3000
+  },
+  context: {
+    provider: 'honeycoin',
+    currency: 'UGX',
+    accountNumber: '256779280949'
+  },
+  provider: 'honeycoin',
+  transactionId: 'txn_abc123',
+  canRetry: true,
+  retryAfter: 300
+}
+```
+
+## Error Categories
+
+### Validation Errors
+
+Errors in transaction data before sending to providers:
+
+```typescript
+// Invalid phone number
+{
+  name: 'ValidationError',
+  code: 'INVALID_PHONE_NUMBER',
+  message: 'Phone number format is invalid',
+  details: {
+    provided: '123456',
+    expected: '256XXXXXXXXX',
+    pattern: '^256[0-9]{9}$'
+  },
+  canRetry: false
+}
+
+// Amount too small
+{
+  name: 'ValidationError',
+  code: 'AMOUNT_TOO_SMALL',
+  message: 'Transaction amount is below minimum limit',
+  details: {
+    provided: 100,
+    minimum: 1000,
+    currency: 'UGX'
+  },
+  canRetry: false
+}
+
+// Missing required field
+{
+  name: 'ValidationError',
+  code: 'MISSING_REQUIRED_FIELD',
+  message: 'Required field "externalId" is missing',
+  details: {
+    field: 'externalId',
+    type: 'string'
+  },
+  canRetry: false
+}
+```
+
+### Payment Errors
+
+Errors during payment processing:
+
+```typescript
+// Insufficient funds
+{
+  name: 'PaymentError',
+  code: 'INSUFFICIENT_FUNDS',
+  message: 'Customer has insufficient balance',
+  details: {
+    availableBalance: 5000,
+    requestedAmount: 10000
+  },
+  canRetry: true,
+  retryAfter: 3600  // Customer can top up and retry
+}
+
+// Customer cancelled
+{
+  name: 'PaymentError',
+  code: 'CUSTOMER_CANCELLED',
+  message: 'Customer declined the payment request',
+  details: {
+    cancelledAt: '2024-01-15T10:05:00Z',
+    reason: 'User pressed cancel on payment prompt'
+  },
+  canRetry: true
+}
+
+// Account blocked
+{
+  name: 'PaymentError',
+  code: 'ACCOUNT_BLOCKED',
+  message: 'Customer account is temporarily blocked',
+  details: {
+    blockReason: 'Suspicious activity detected',
+    contactSupport: true
+  },
+  canRetry: false
+}
+```
+
+### Provider Errors
+
+Errors from payment provider APIs:
+
+```typescript
+// Provider unavailable
+{
+  name: 'ProviderError',
+  code: 'PROVIDER_UNAVAILABLE',
+  message: 'Payment provider is temporarily unavailable',
+  provider: 'honeycoin',
+  details: {
+    statusCode: 503,
+    providerMessage: 'Service temporarily unavailable'
+  },
+  canRetry: true,
+  retryAfter: 60
+}
+
+// Authentication failed
+{
+  name: 'ProviderError',
+  code: 'AUTHENTICATION_FAILED',
+  message: 'Invalid API credentials for provider',
+  provider: 'easypay',
+  details: {
+    credential: 'api_key',
+    hint: 'Check your API key and client ID'
+  },
+  canRetry: false
+}
+
+// Rate limited
+{
+  name: 'ProviderError',
+  code: 'RATE_LIMITED',
+  message: 'Too many requests to provider',
+  provider: 'tola',
+  details: {
+    limit: 100,
+    window: '1 minute',
+    resetAt: '2024-01-15T10:01:00Z'
+  },
+  canRetry: true,
+  retryAfter: 30
+}
+```
+
+### Network Errors
+
+Connectivity and timeout issues:
+
+```typescript
+// Connection timeout
+{
+  name: 'NetworkError',
+  code: 'CONNECTION_TIMEOUT',
+  message: 'Request to provider timed out',
+  provider: 'honeycoin',
+  details: {
+    timeout: 30000,
+    url: 'https://api.honeycoin.io/v1/collections'
+  },
+  canRetry: true,
+  retryAfter: 5
+}
+
+// Network unreachable
+{
+  name: 'NetworkError',
+  code: 'NETWORK_UNREACHABLE',
+  message: 'Unable to reach payment provider',
+  details: {
+    host: 'api.easypay.ug',
+    error: 'ENOTFOUND'
+  },
+  canRetry: true,
+  retryAfter: 30
+}
+```
+
+## Error Handling Patterns
+
+### Basic Error Handling
+
+```typescript
+import { PaymentClient, FundKitError } from '@fundkit/core';
+
+try {
+  const result = await client.collection(transaction);
+  console.log('Payment successful:', result);
+} catch (error) {
+  if (error instanceof FundKitError) {
+    console.error('FundKit Error:', {
+      code: error.code,
+      message: error.message,
+      canRetry: error.canRetry
+    });
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+### Specific Error Handling
+
+```typescript
+try {
+  const result = await client.collection(transaction);
+  return { success: true, data: result };
+} catch (error) {
+  if (error instanceof FundKitError) {
+    switch (error.code) {
+      case 'INSUFFICIENT_FUNDS':
+        return {
+          success: false,
+          error: 'Not enough funds',
+          userMessage: 'Please top up your account and try again',
+          canRetry: true
+        };
+        
+      case 'INVALID_PHONE_NUMBER':
+        return {
+          success: false,
+          error: 'Invalid phone',
+          userMessage: 'Please check your phone number',
+          canRetry: false
+        };
+        
+      case 'CUSTOMER_CANCELLED':
+        return {
+          success: false,
+          error: 'Payment cancelled',
+          userMessage: 'Payment was cancelled',
+          canRetry: true
+        };
+        
+      case 'PROVIDER_UNAVAILABLE':
+        return {
+          success: false,
+          error: 'Service unavailable',
+          userMessage: 'Payment service is temporarily unavailable',
+          canRetry: true,
+          retryAfter: error.retryAfter
+        };
+        
+      default:
+        return {
+          success: false,
+          error: 'Payment failed',
+          userMessage: 'Something went wrong. Please try again.',
+          canRetry: error.canRetry || false
+        };
+    }
+  }
+  
+  // Non-FundKit errors
+  console.error('Unexpected error:', error);
+  return {
+    success: false,
+    error: 'System error',
+    userMessage: 'A system error occurred. Please contact support.',
+    canRetry: false
+  };
+}
+```
+
+### Retry Logic
+
+```typescript
+async function processPaymentWithRetry(
+  client: PaymentClient,
+  transaction: Transaction,
+  maxAttempts = 3
+) {
+  let lastError: FundKitError | null = null;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await client.collection(transaction);
+      return { success: true, data: result };
+    } catch (error) {
+      lastError = error as FundKitError;
+      
+      // Don't retry if error is not retryable
+      if (!error.canRetry) {
+        break;
+      }
+      
+      // Don't retry validation errors
+      if (error.name === 'ValidationError') {
+        break;
+      }
+      
+      // Wait before retry if specified
+      if (error.retryAfter && attempt < maxAttempts) {
+        console.log(`Waiting ${error.retryAfter} seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, error.retryAfter * 1000));
+      } else if (attempt < maxAttempts) {
+        // Exponential backoff
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      console.log(`Attempt ${attempt} failed:`, error.message);
+    }
+  }
+  
+  return {
+    success: false,
+    error: lastError,
+    attempts: maxAttempts
+  };
+}
+
+// Usage
+const result = await processPaymentWithRetry(client, transaction);
+if (result.success) {
+  console.log('Payment succeeded:', result.data);
+} else {
+  console.error('Payment failed after retries:', result.error);
+}
+```
+
+## Error Recovery Strategies
+
+### Provider Fallback
+
+```typescript
+async function processWithFallback(transaction: Transaction) {
+  const providers = ['honeycoin', 'easypay', 'tola'];
+  
+  for (const provider of providers) {
+    try {
+      const result = await client.collection(transaction, {
+        preferredProvider: provider
+      });
+      
+      console.log(`Payment succeeded with ${provider}`);
+      return result;
+    } catch (error) {
+      console.log(`${provider} failed:`, error.message);
+      
+      // Don't try other providers for validation errors
+      if (error.name === 'ValidationError') {
+        throw error;
+      }
+      
+      // Don't try other providers for customer-related errors
+      if (['INSUFFICIENT_FUNDS', 'CUSTOMER_CANCELLED', 'ACCOUNT_BLOCKED'].includes(error.code)) {
+        throw error;
+      }
+      
+      // Continue to next provider for system errors
+      if (error.code === 'PROVIDER_UNAVAILABLE') {
+        continue;
+      }
+      
+      // For other errors, also continue to next provider
+      continue;
+    }
+  }
+  
+  throw new Error('All providers failed');
+}
+```
+
+### Circuit Breaker Pattern
+
+```typescript
+class CircuitBreaker {
+  private failures = 0;
+  private lastFailureTime = 0;
+  private state: 'closed' | 'open' | 'half-open' = 'closed';
+  
+  constructor(
+    private threshold = 5,           // Failures before opening
+    private timeout = 60000          // Time to wait before half-open
+  ) {}
+  
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.state === 'open') {
+      if (Date.now() - this.lastFailureTime < this.timeout) {
+        throw new Error('Circuit breaker is open');
+      }
+      this.state = 'half-open';
+    }
+    
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+  
+  private onSuccess() {
+    this.failures = 0;
+    this.state = 'closed';
+  }
+  
+  private onFailure() {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+    
+    if (this.failures >= this.threshold) {
+      this.state = 'open';
+    }
+  }
+}
+
+// Usage
+const circuitBreaker = new CircuitBreaker(3, 30000);
+
+try {
+  const result = await circuitBreaker.execute(() => 
+    client.collection(transaction)
+  );
+} catch (error) {
+  console.error('Payment failed or circuit breaker open:', error.message);
+}
+```
+
+## User-Friendly Error Messages
+
+### Error Message Mapping
+
+```typescript
+const ERROR_MESSAGES = {
+  // Validation errors
+  INVALID_PHONE_NUMBER: 'Please enter a valid phone number (e.g., 256779280949)',
+  AMOUNT_TOO_SMALL: 'Minimum payment amount is 1,000 UGX',
+  AMOUNT_TOO_LARGE: 'Maximum payment amount is 5,000,000 UGX',
+  INVALID_CURRENCY: 'This currency is not supported',
+  
+  // Payment errors
+  INSUFFICIENT_FUNDS: 'You don\'t have enough money in your account. Please top up and try again.',
+  CUSTOMER_CANCELLED: 'Payment was cancelled. You can try again anytime.',
+  ACCOUNT_BLOCKED: 'Your account is temporarily blocked. Please contact your mobile money provider.',
+  INVALID_PIN: 'Incorrect PIN entered. Please try again.',
+  
+  // System errors
+  PROVIDER_UNAVAILABLE: 'Payment service is temporarily unavailable. Please try again in a few minutes.',
+  NETWORK_ERROR: 'Connection problem. Please check your internet and try again.',
+  RATE_LIMITED: 'Too many payment attempts. Please wait a moment and try again.',
+  TIMEOUT: 'Payment is taking longer than usual. Please check your phone for any payment prompts.',
+  
+  // Default
+  UNKNOWN_ERROR: 'Something went wrong. Please try again or contact support if the problem continues.'
+};
+
+function getUserFriendlyMessage(error: FundKitError): string {
+  return ERROR_MESSAGES[error.code] || ERROR_MESSAGES.UNKNOWN_ERROR;
+}
+
+// Usage
+try {
+  const result = await client.collection(transaction);
+} catch (error) {
+  const userMessage = getUserFriendlyMessage(error);
+  showNotification(userMessage, 'error');
+}
+```
+
+### Multilingual Error Messages
+
+```typescript
+const ERROR_MESSAGES = {
+  en: {
+    INSUFFICIENT_FUNDS: 'You don\'t have enough money. Please top up and try again.',
+    INVALID_PHONE_NUMBER: 'Please enter a valid phone number.',
+    CUSTOMER_CANCELLED: 'Payment was cancelled.'
+  },
+  sw: {
+    INSUFFICIENT_FUNDS: 'Huna pesa za kutosha. Tafadhali jaza na ujaribu tena.',
+    INVALID_PHONE_NUMBER: 'Tafadhali ingiza nambari sahihi ya simu.',
+    CUSTOMER_CANCELLED: 'Malipo yameghairiwa.'
+  },
+  lg: {
+    INSUFFICIENT_FUNDS: 'Tolina ssente zimala. Ddamu ossemu ssente ojukale.',
+    INVALID_PHONE_NUMBER: 'Wandiise nomba ya essimu etuufu.',
+    CUSTOMER_CANCELLED: 'Okusasula kusaaziddwamu.'
+  }
+};
+
+function getLocalizedMessage(error: FundKitError, language = 'en'): string {
+  const messages = ERROR_MESSAGES[language] || ERROR_MESSAGES.en;
+  return messages[error.code] || messages.UNKNOWN_ERROR || 'An error occurred.';
+}
+```
+
+## Error Monitoring and Logging
+
+### Structured Logging
+
+```typescript
+import { Logger } from 'winston';
+
+class PaymentErrorLogger {
+  constructor(private logger: Logger) {}
+  
+  logError(error: FundKitError, context: any = {}) {
+    const logData = {
+      timestamp: new Date().toISOString(),
+      errorCode: error.code,
+      errorMessage: error.message,
+      provider: error.provider,
+      transactionId: error.transactionId,
+      canRetry: error.canRetry,
+      retryAfter: error.retryAfter,
+      details: error.details,
+      context: {
+        ...error.context,
+        ...context
+      }
+    };
+    
+    // Log at appropriate level
+    if (error.name === 'ValidationError') {
+      this.logger.warn('Validation error', logData);
+    } else if (error.canRetry) {
+      this.logger.warn('Retryable error', logData);
+    } else {
+      this.logger.error('Non-retryable error', logData);
+    }
+  }
+}
+
+// Usage
+const errorLogger = new PaymentErrorLogger(logger);
+
+try {
+  const result = await client.collection(transaction);
+} catch (error) {
+  errorLogger.logError(error, {
+    userId: 'user_123',
+    sessionId: 'session_456',
+    ipAddress: '192.168.1.1'
+  });
+  
+  throw error; // Re-throw for application handling
+}
+```
+
+### Error Metrics
+
+```typescript
+class ErrorMetrics {
+  private metrics = new Map<string, number>();
+  
+  incrementError(errorCode: string, provider?: string) {
+    const key = provider ? `${provider}:${errorCode}` : errorCode;
+    this.metrics.set(key, (this.metrics.get(key) || 0) + 1);
+  }
+  
+  getErrorRate(errorCode: string, totalTransactions: number): number {
+    const errorCount = this.metrics.get(errorCode) || 0;
+    return totalTransactions > 0 ? errorCount / totalTransactions : 0;
+  }
+  
+  getTopErrors(limit = 10): Array<{ error: string; count: number }> {
+    return Array.from(this.metrics.entries())
+      .map(([error, count]) => ({ error, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+  }
+}
+
+// Usage
+const errorMetrics = new ErrorMetrics();
+
+try {
+  const result = await client.collection(transaction);
+} catch (error) {
+  errorMetrics.incrementError(error.code, error.provider);
+  throw error;
+}
+
+// Regular reporting
+setInterval(() => {
+  const topErrors = errorMetrics.getTopErrors();
+  console.log('Top errors:', topErrors);
+}, 60000); // Every minute
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card icon="shield-check" title="Always Check Error Type">
+    ```typescript
+    // Good: Check error type
+    if (error instanceof FundKitError) {
+      handleFundKitError(error);
+    } else {
+      handleUnexpectedError(error);
+    }
+    
+    // Bad: Assume all errors are FundKit errors
+    // handleFundKitError(error);
+    ```
+  </Card>
+  
+  <Card icon="users" title="Provide User-Friendly Messages">
+    ```typescript
+    // Good: User-friendly message
+    showMessage(
+      'Please top up your account and try again',
+      'error'
+    );
+    
+    // Bad: Technical error message
+    // showMessage(error.message, 'error');
+    ```
+  </Card>
+  
+  <Card icon="arrows-rotate" title="Respect Retry Guidelines">
+    ```typescript
+    // Good: Check if retryable
+    if (error.canRetry) {
+      setTimeout(() => retryPayment(), 
+                 (error.retryAfter || 5) * 1000);
+    }
+    
+    // Bad: Always retry
+    // setTimeout(() => retryPayment(), 1000);
+    ```
+  </Card>
+  
+  <Card icon="chart-line" title="Monitor Error Patterns">
+    ```typescript
+    // Good: Track error patterns
+    analytics.track('payment_error', {
+      code: error.code,
+      provider: error.provider,
+      canRetry: error.canRetry
+    });
+    ```
+  </Card>
+</CardGroup>
+
+<Warning>
+  **Security Note:** Never log sensitive information like API keys, customer PINs, or full account numbers in error logs. FundKit automatically sanitizes error details, but always review your logging practices.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Testing Errors" icon="flask" href="/advanced/testing">
+  Learn how to test error scenarios in sandbox mode
+</Card>
+
+<Card title="Webhooks" icon="webhook" href="/advanced/webhooks">
+  Handle transaction status updates via webhooks
+</Card>
+
+<Card title="Production Checklist" icon="clipboard-check" href="/advanced/production">
+  Prepare your error handling for production
+</Card>
+
+<Card title="API Reference" icon="code" href="/api-reference/errors">
+  Complete error reference documentation
+</Card>
+
+</CardGroup>

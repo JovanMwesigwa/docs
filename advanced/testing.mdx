@@ -1,0 +1,531 @@
+---
+title: 'Testing Guide'
+description: 'Comprehensive testing strategies for FundKit integration including unit tests, integration tests, and payment provider testing'
+---
+
+# Testing Guide
+
+This guide covers testing strategies for FundKit integration, from unit tests to end-to-end payment flows.
+
+## Testing Philosophy
+
+FundKit follows a multi-layered testing approach:
+
+- **Unit Tests**: Test individual components and utilities
+- **Integration Tests**: Test provider interactions and API responses
+- **End-to-End Tests**: Test complete payment flows
+- **Mock Testing**: Test without hitting real provider APIs
+- **Sandbox Testing**: Test with real provider sandbox environments
+
+## Unit Testing
+
+### Testing Payment Client
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+import { describe, test, expect, vi } from 'vitest';
+
+describe('PaymentClient', () => {
+  const mockConfig = {
+    honeycoin: { apiKey: 'test-key' },
+    easypay: { apiKey: 'test-key' },
+    tola: { apiKey: 'test-key' },
+  };
+
+  test('should initialize with providers', () => {
+    const client = new PaymentClient(mockConfig);
+    expect(client.getAvailableProviders()).toContain('honeycoin');
+    expect(client.getAvailableProviders()).toContain('easypay');
+    expect(client.getAvailableProviders()).toContain('tola');
+  });
+
+  test('should validate collection requests', async () => {
+    const client = new PaymentClient(mockConfig);
+
+    await expect(
+      client.collect({
+        amount: -100, // Invalid negative amount
+        currency: 'UGX',
+        phoneNumber: '+256701234567',
+        reason: 'Test payment',
+      })
+    ).rejects.toThrow('Amount must be positive');
+  });
+});
+```
+
+### Testing Provider Selection
+
+```typescript
+import { selectBestProvider } from '@fundkit/core/helpers';
+import { describe, test, expect } from 'vitest';
+
+describe('Provider Selection', () => {
+  const providers = ['honeycoin', 'easypay', 'tola'];
+
+  test('should select provider based on currency', () => {
+    const provider = selectBestProvider({
+      providers,
+      currency: 'UGX',
+      amount: 10000,
+    });
+
+    expect(['honeycoin', 'easypay']).toContain(provider);
+  });
+
+  test('should handle unsupported currency', () => {
+    expect(() => {
+      selectBestProvider({
+        providers,
+        currency: 'USD', // Not supported
+        amount: 10000,
+      });
+    }).toThrow('No providers support currency USD');
+  });
+});
+```
+
+## Integration Testing
+
+### Mocking Provider Responses
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
+
+// Mock the provider modules
+vi.mock('@fundkit/honeycoin', () => ({
+  HoneyCoinProvider: vi.fn().mockImplementation(() => ({
+    collect: vi.fn(),
+    checkTransactionStatus: vi.fn(),
+    getSupportedCurrencies: vi.fn().mockReturnValue(['UGX', 'KES', 'TZS']),
+  })),
+}));
+
+describe('Payment Integration Tests', () => {
+  let client: PaymentClient;
+  let mockProvider: any;
+
+  beforeEach(() => {
+    const { HoneyCoinProvider } = require('@fundkit/honeycoin');
+    mockProvider = new HoneyCoinProvider();
+    client = new PaymentClient({
+      honeycoin: { apiKey: 'test-key' },
+    });
+  });
+
+  test('should handle successful collection', async () => {
+    const mockResponse = {
+      transactionId: 'tx-12345',
+      status: 'pending',
+      amount: 10000,
+      currency: 'UGX',
+    };
+
+    mockProvider.collect.mockResolvedValue(mockResponse);
+
+    const result = await client.collect({
+      amount: 10000,
+      currency: 'UGX',
+      phoneNumber: '+256701234567',
+      reason: 'Test payment',
+    });
+
+    expect(result.data.transactionId).toBe('tx-12345');
+    expect(result.provider).toBe('honeycoin');
+  });
+
+  test('should handle provider errors gracefully', async () => {
+    mockProvider.collect.mockRejectedValue(new Error('Provider API unavailable'));
+
+    await expect(
+      client.collect({
+        amount: 10000,
+        currency: 'UGX',
+        phoneNumber: '+256701234567',
+        reason: 'Test payment',
+      })
+    ).rejects.toThrow('Provider API unavailable');
+  });
+});
+```
+
+## Sandbox Testing
+
+### Setting Up Sandbox Environment
+
+```typescript
+// test/setup.ts
+import { PaymentClient } from '@fundkit/core';
+
+export const createTestClient = () => {
+  return new PaymentClient({
+    honeycoin: {
+      apiKey: process.env.HONEYCOIN_SANDBOX_KEY!,
+      baseUrl: 'https://sandbox-api.honeycoin.io',
+      environment: 'sandbox',
+    },
+    easypay: {
+      apiKey: process.env.EASYPAY_SANDBOX_KEY!,
+      baseUrl: 'https://sandbox.easypay.ug',
+      environment: 'sandbox',
+    },
+    tola: {
+      apiKey: process.env.TOLA_SANDBOX_KEY!,
+      baseUrl: 'https://sandbox-api.tola.ug',
+      environment: 'sandbox',
+    },
+  });
+};
+
+// Sandbox test phone numbers (these don't charge real money)
+export const TEST_NUMBERS = {
+  UGX: {
+    success: '+256700000000', // Always succeeds
+    failure: '+256700000001', // Always fails
+    timeout: '+256700000002', // Times out
+  },
+  KES: {
+    success: '+254700000000',
+    failure: '+254700000001',
+    timeout: '+254700000002',
+  },
+};
+```
+
+### End-to-End Payment Tests
+
+```typescript
+import { createTestClient, TEST_NUMBERS } from './setup';
+import { describe, test, expect } from 'vitest';
+
+describe('E2E Payment Tests', () => {
+  const client = createTestClient();
+
+  test('should complete successful payment flow', async () => {
+    // Initiate collection
+    const collection = await client.collect({
+      amount: 1000,
+      currency: 'UGX',
+      phoneNumber: TEST_NUMBERS.UGX.success,
+      reason: 'E2E test payment',
+    });
+
+    expect(collection.data.transactionId).toBeDefined();
+    expect(collection.data.status).toBe('pending');
+
+    // Poll for completion
+    let status = collection.data.status;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (status === 'pending' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const statusCheck = await client.checkTransactionStatus(
+        collection.data.transactionId,
+        collection.provider
+      );
+
+      status = statusCheck.data.status;
+      attempts++;
+    }
+
+    expect(status).toBe('completed');
+  }, 30000); // 30 second timeout
+
+  test('should handle failed payments', async () => {
+    const collection = await client.collect({
+      amount: 1000,
+      currency: 'UGX',
+      phoneNumber: TEST_NUMBERS.UGX.failure,
+      reason: 'E2E test failure',
+    });
+
+    // Wait for processing
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    const finalStatus = await client.checkTransactionStatus(
+      collection.data.transactionId,
+      collection.provider
+    );
+
+    expect(finalStatus.data.status).toBe('failed');
+    expect(finalStatus.data.failureReason).toBeDefined();
+  });
+});
+```
+
+## Testing Webhooks
+
+### Webhook Handler Testing
+
+```typescript
+import { verifyWebhookSignature } from '@fundkit/core/utils';
+import { describe, test, expect } from 'vitest';
+import crypto from 'crypto';
+
+describe('Webhook Testing', () => {
+  const webhookSecret = 'test-webhook-secret';
+
+  test('should verify valid webhook signatures', () => {
+    const payload = JSON.stringify({
+      transactionId: 'tx-12345',
+      status: 'completed',
+      timestamp: Date.now(),
+    });
+
+    const signature = crypto.createHmac('sha256', webhookSecret).update(payload).digest('hex');
+
+    const isValid = verifyWebhookSignature(payload, signature, webhookSecret);
+
+    expect(isValid).toBe(true);
+  });
+
+  test('should reject invalid signatures', () => {
+    const payload = '{"transactionId":"tx-12345"}';
+    const invalidSignature = 'invalid-signature';
+
+    const isValid = verifyWebhookSignature(payload, invalidSignature, webhookSecret);
+
+    expect(isValid).toBe(false);
+  });
+});
+```
+
+### Testing Express.js Webhook Endpoint
+
+```typescript
+import request from 'supertest';
+import express from 'express';
+import { webhookHandler } from '../src/webhook-handler';
+import crypto from 'crypto';
+
+const app = express();
+app.use(express.raw({ type: 'application/json' }));
+app.post('/webhook', webhookHandler);
+
+describe('Webhook Endpoint', () => {
+  test('should process valid webhook', async () => {
+    const payload = {
+      transactionId: 'tx-12345',
+      status: 'completed',
+      amount: 10000,
+      timestamp: Date.now(),
+    };
+
+    const body = JSON.stringify(payload);
+    const signature = crypto
+      .createHmac('sha256', process.env.WEBHOOK_SECRET!)
+      .update(body)
+      .digest('hex');
+
+    const response = await request(app)
+      .post('/webhook')
+      .set('x-fundkit-signature', signature)
+      .set('Content-Type', 'application/json')
+      .send(body);
+
+    expect(response.status).toBe(200);
+    expect(response.body.received).toBe(true);
+  });
+
+  test('should reject webhooks with invalid signatures', async () => {
+    const payload = { transactionId: 'tx-12345' };
+
+    const response = await request(app)
+      .post('/webhook')
+      .set('x-fundkit-signature', 'invalid-signature')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify(payload));
+
+    expect(response.status).toBe(401);
+  });
+});
+```
+
+## Performance Testing
+
+### Load Testing Payment Endpoints
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+import { performance } from 'perf_hooks';
+import { describe, test, expect } from 'vitest';
+
+describe('Performance Tests', () => {
+  const client = createTestClient();
+
+  test('should handle concurrent requests', async () => {
+    const concurrency = 10;
+    const startTime = performance.now();
+
+    const requests = Array.from({ length: concurrency }, (_, i) =>
+      client.collect({
+        amount: 1000,
+        currency: 'UGX',
+        phoneNumber: TEST_NUMBERS.UGX.success,
+        reason: `Load test ${i}`,
+      })
+    );
+
+    const results = await Promise.all(requests);
+    const endTime = performance.now();
+
+    // All requests should succeed
+    results.forEach(result => {
+      expect(result.data.transactionId).toBeDefined();
+    });
+
+    // Should complete within reasonable time
+    const totalTime = endTime - startTime;
+    expect(totalTime).toBeLessThan(10000); // 10 seconds
+  });
+
+  test('should respect rate limits', async () => {
+    const requests = Array.from({ length: 100 }, (_, i) =>
+      client
+        .collect({
+          amount: 1000,
+          currency: 'UGX',
+          phoneNumber: TEST_NUMBERS.UGX.success,
+          reason: `Rate limit test ${i}`,
+        })
+        .catch(error => error)
+    );
+
+    const results = await Promise.all(requests);
+
+    // Some requests should be rate limited
+    const rateLimitedRequests = results.filter(
+      result => result instanceof Error && result.message.includes('rate limit')
+    );
+
+    expect(rateLimitedRequests.length).toBeGreaterThan(0);
+  });
+});
+```
+
+## Test Configuration
+
+### Jest/Vitest Configuration
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+    setupFiles: ['./test/setup.ts'],
+    testTimeout: 30000,
+    hookTimeout: 10000,
+    env: {
+      NODE_ENV: 'test',
+    },
+  },
+  resolve: {
+    alias: {
+      '@fundkit/core': './packages/core/src',
+      '@fundkit/honeycoin': './packages/honeycoin/src',
+      '@fundkit/easypay': './packages/easypay/src',
+      '@fundkit/tola': './packages/tola/src',
+    },
+  },
+});
+```
+
+### Environment Variables for Testing
+
+```bash
+# .env.test
+NODE_ENV=test
+
+# Sandbox API keys
+HONEYCOIN_SANDBOX_KEY=sk_sandbox_honeycoin_123
+EASYPAY_SANDBOX_KEY=sk_sandbox_easypay_123
+TOLA_SANDBOX_KEY=sk_sandbox_tola_123
+
+# Webhook testing
+WEBHOOK_SECRET=test_webhook_secret_123
+```
+
+## Running Tests
+
+### NPM Scripts
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:unit": "vitest --run --reporter=verbose src/**/*.test.ts",
+    "test:integration": "vitest --run --reporter=verbose test/integration/**/*.test.ts",
+    "test:e2e": "vitest --run --reporter=verbose test/e2e/**/*.test.ts",
+    "test:coverage": "vitest --coverage",
+    "test:sandbox": "NODE_ENV=test vitest --run test/sandbox/**/*.test.ts"
+  }
+}
+```
+
+### GitHub Actions CI
+
+```yaml
+# .github/workflows/test.yml
+name: Test Suite
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          HONEYCOIN_SANDBOX_KEY: ${{ secrets.HONEYCOIN_SANDBOX_KEY }}
+          EASYPAY_SANDBOX_KEY: ${{ secrets.EASYPAY_SANDBOX_KEY }}
+          TOLA_SANDBOX_KEY: ${{ secrets.TOLA_SANDBOX_KEY }}
+
+      - name: Generate coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+```
+
+## Best Practices
+
+### Test Organization
+
+- **Arrange-Act-Assert**: Structure tests with clear setup, execution, and verification
+- **One Concept Per Test**: Each test should verify one specific behavior
+- **Descriptive Names**: Use clear, descriptive test names that explain the scenario
+- **Test Data**: Use factories or fixtures for consistent test data
+
+### Mocking Guidelines
+
+- **Mock External Dependencies**: Always mock provider APIs and external services
+- **Preserve Interface Contracts**: Mocks should respect the same interface as real implementations
+- **Test Both Success and Failure**: Cover both happy paths and error scenarios
+- **Reset Mocks**: Clear mock state between tests to avoid interference
+
+### Continuous Integration
+
+- **Fast Feedback**: Prioritize unit tests for quick feedback
+- **Parallel Execution**: Run tests in parallel when possible
+- **Environment Isolation**: Use separate test environments for different test types
+- **Coverage Tracking**: Maintain high test coverage and track changes over time
+
+This comprehensive testing approach ensures your FundKit integration is reliable, maintainable, and production-ready.

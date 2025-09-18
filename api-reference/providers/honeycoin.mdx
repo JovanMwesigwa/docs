@@ -1,0 +1,520 @@
+---
+title: "HoneyCoin Provider API"
+description: "Complete API reference for the HoneyCoin payment provider in FundKit"
+---
+
+# HoneyCoin Provider API Reference
+
+HoneyCoin is a multi-country mobile money provider supporting Uganda (MTN, Airtel), Kenya (M-Pesa, Airtel), and Tanzania (M-Pesa, Tigo, Airtel). This page documents HoneyCoin-specific configurations, methods, and response formats.
+
+## Provider Configuration
+
+### Basic Configuration
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+
+const client = new PaymentClient({
+  honeycoin: {
+    apiKey: 'your-honeycoin-api-key',
+    environment: 'sandbox' // or 'production'
+  }
+});
+```
+
+### Advanced Configuration
+
+```typescript
+const client = new PaymentClient({
+  honeycoin: {
+    apiKey: 'your-honeycoin-api-key',
+    environment: 'production',
+    baseUrl: 'https://api.honeycoin.io', // Custom endpoint
+    timeout: 30000,                      // 30 second timeout
+    retries: 3,                         // Retry attempts
+    webhookSecret: 'your-webhook-secret' // For webhook verification
+  }
+});
+```
+
+## Configuration Options
+
+### `HoneyCoinConfig` Interface
+
+```typescript
+interface HoneyCoinConfig {
+  apiKey: string;           // Required: Your HoneyCoin API key
+  environment?: 'sandbox' | 'production'; // Default: 'sandbox'
+  baseUrl?: string;         // Custom API endpoint
+  timeout?: number;         // Request timeout in milliseconds
+  retries?: number;         // Number of retry attempts
+  webhookSecret?: string;   // Secret for webhook verification
+  defaultCountry?: string;  // Default country code ('UG', 'KE', 'TZ')
+}
+```
+
+## Supported Features
+
+### Multi-Country Support
+
+| Country | Currency | Networks | Min Amount | Max Amount |
+|---------|----------|----------|------------|------------|
+| Uganda | UGX | MTN, Airtel | 1,000 (10 UGX) | 10,000,000 (100,000 UGX) |
+| Kenya | KES | M-Pesa, Airtel | 100 (1 KES) | 1,000,000 (10,000 KES) |
+| Tanzania | TZS | M-Pesa, Tigo, Airtel | 1,000 (10 TZS) | 5,000,000 (50,000 TZS) |
+
+### Phone Number Formats
+
+```typescript
+// Uganda numbers
+const ugandaNumbers = [
+  '+256701234567',  // MTN
+  '+256751234567',  // MTN
+  '+256782234567',  // Airtel
+  '+256702234567'   // Airtel
+];
+
+// Kenya numbers
+const kenyaNumbers = [
+  '+254712345678',  // Safaricom (M-Pesa)
+  '+254722345678',  // Safaricom (M-Pesa)
+  '+254733345678',  // Airtel
+  '+254750345678'   // Airtel
+];
+
+// Tanzania numbers
+const tanzaniaNumbers = [
+  '+255712345678',  // Vodacom (M-Pesa)
+  '+255622345678',  // Airtel
+  '+255652345678'   // Tigo
+];
+```
+
+## HoneyCoin-Specific Methods
+
+### Direct Provider Access
+
+```typescript
+import { HoneyCoinProvider } from '@fundkit/honeycoin';
+
+const honeycoin = new HoneyCoinProvider({
+  apiKey: 'your-api-key',
+  environment: 'sandbox'
+});
+
+// Direct collection
+const result = await honeycoin.collect({
+  amount: 10000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Payment for order #12345'
+});
+```
+
+### Network Detection
+
+```typescript
+// HoneyCoin automatically detects the mobile network
+const networkInfo = await honeycoin.detectNetwork('+256701234567');
+console.log(networkInfo);
+// {
+//   country: 'UG',
+//   network: 'MTN',
+//   currency: 'UGX',
+//   supported: true
+// }
+```
+
+### Balance Inquiry
+
+```typescript
+// Check account balance (if supported by network)
+const balance = await honeycoin.checkBalance('+256701234567');
+console.log(balance);
+// {
+//   available: 150000,  // 1,500 UGX
+//   currency: 'UGX',
+//   lastUpdated: '2024-01-15T10:30:00Z'
+// }
+```
+
+## Response Formats
+
+### HoneyCoin Collection Response
+
+```typescript
+interface HoneyCoinCollectionResponse extends CollectionResponse {
+  // Standard fields
+  transactionId: string;
+  status: TransactionStatus;
+  amount: number;
+  currency: string;
+  phoneNumber: string;
+  reason: string;
+  
+  // HoneyCoin-specific fields
+  providerData: {
+    honeycoinTransactionId: string;  // HoneyCoin's internal ID
+    networkOperator: string;         // 'MTN', 'Airtel', 'M-Pesa', etc.
+    networkReference?: string;       // Network confirmation code
+    customerName?: string;           // Customer name from network
+    accountBalance?: number;         // Customer's account balance
+    networkFee: number;             // Network transaction fee
+    processingStage: string;        // Current processing stage
+    estimatedCompletion?: string;   // Estimated completion time
+  };
+}
+```
+
+### Status-Specific Data
+
+```typescript
+// Pending status
+{
+  status: 'pending',
+  providerData: {
+    processingStage: 'awaiting_customer_approval',
+    estimatedCompletion: '2024-01-15T10:05:00Z'
+  }
+}
+
+// Processing status
+{
+  status: 'processing',
+  providerData: {
+    processingStage: 'network_confirmation',
+    networkReference: 'MTN123456789'
+  }
+}
+
+// Completed status
+{
+  status: 'completed',
+  providerData: {
+    processingStage: 'completed',
+    networkReference: 'MTN123456789',
+    customerName: 'John Doe',
+    accountBalance: 145000,
+    networkFee: 500
+  }
+}
+
+// Failed status
+{
+  status: 'failed',
+  providerData: {
+    processingStage: 'failed',
+    failureCode: 'INSUFFICIENT_FUNDS',
+    failureMessage: 'Customer has insufficient balance'
+  }
+}
+```
+
+## Error Codes
+
+### HoneyCoin-Specific Errors
+
+```typescript
+// Network not supported
+{
+  name: 'ProviderError',
+  code: 'NETWORK_NOT_SUPPORTED',
+  message: 'Phone number network not supported in this country',
+  provider: 'honeycoin',
+  details: {
+    phoneNumber: '+256123456789',
+    detectedNetwork: 'unknown',
+    supportedNetworks: ['MTN', 'Airtel']
+  }
+}
+
+// Country restrictions
+{
+  name: 'ProviderError',
+  code: 'COUNTRY_RESTRICTED',
+  message: 'Transactions not available in this country',
+  provider: 'honeycoin',
+  details: {
+    detectedCountry: 'RW',
+    supportedCountries: ['UG', 'KE', 'TZ']
+  }
+}
+
+// Network maintenance
+{
+  name: 'ProviderError',
+  code: 'NETWORK_MAINTENANCE',
+  message: 'Mobile network is under maintenance',
+  provider: 'honeycoin',
+  details: {
+    network: 'MTN',
+    country: 'UG',
+    estimatedRestoration: '2024-01-15T12:00:00Z'
+  }
+}
+
+// Daily limit exceeded
+{
+  name: 'ProviderError',
+  code: 'DAILY_LIMIT_EXCEEDED',
+  message: 'Customer has exceeded daily transaction limit',
+  provider: 'honeycoin',
+  details: {
+    dailyLimit: 1000000,
+    currentTotal: 950000,
+    requestedAmount: 100000
+  }
+}
+```
+
+## Webhook Integration
+
+### HoneyCoin Webhook Format
+
+```typescript
+interface HoneyCoinWebhook {
+  event: 'transaction.updated';
+  transactionId: string;
+  honeycoinTransactionId: string;
+  status: TransactionStatus;
+  timestamp: string;
+  data: {
+    amount: number;
+    currency: string;
+    phoneNumber: string;
+    networkOperator: string;
+    networkReference?: string;
+    customerName?: string;
+    processingStage: string;
+    fees: {
+      networkFee: number;
+      processingFee: number;
+      totalFee: number;
+    };
+  };
+  signature: string; // HMAC-SHA256 signature
+}
+```
+
+### Webhook Verification
+
+```typescript
+import crypto from 'crypto';
+
+function verifyHoneyCoinWebhook(
+  payload: string,
+  signature: string,
+  secret: string
+): boolean {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+
+// Express.js webhook handler
+app.post('/webhook/honeycoin', (req, res) => {
+  const signature = req.headers['x-honeycoin-signature'] as string;
+  const payload = JSON.stringify(req.body);
+  
+  if (!verifyHoneyCoinWebhook(payload, signature, process.env.HONEYCOIN_WEBHOOK_SECRET!)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const webhook: HoneyCoinWebhook = req.body;
+  console.log('HoneyCoin webhook received:', webhook);
+  
+  res.json({ received: true });
+});
+```
+
+## Advanced Features
+
+### Bulk Transactions
+
+```typescript
+// Process multiple transactions
+const bulkResults = await honeycoin.bulkCollect([
+  {
+    amount: 10000,
+    currency: 'UGX',
+    phoneNumber: '+256701234567',
+    reason: 'Payment 1'
+  },
+  {
+    amount: 20000,
+    currency: 'KES',
+    phoneNumber: '+254712345678',
+    reason: 'Payment 2'
+  }
+]);
+
+console.log('Bulk processing results:', bulkResults);
+```
+
+### Scheduled Payments
+
+```typescript
+// Schedule a future payment
+const scheduledPayment = await honeycoin.schedulePayment({
+  amount: 50000,
+  currency: 'UGX',
+  phoneNumber: '+256701234567',
+  reason: 'Monthly subscription',
+  scheduledFor: '2024-02-01T09:00:00Z',
+  recurrence: 'monthly'
+});
+```
+
+### Transaction Analytics
+
+```typescript
+// Get transaction analytics
+const analytics = await honeycoin.getAnalytics({
+  startDate: '2024-01-01',
+  endDate: '2024-01-31',
+  country: 'UG',
+  network: 'MTN'
+});
+
+console.log(analytics);
+// {
+//   totalTransactions: 1250,
+//   totalAmount: 125000000,
+//   successRate: 0.945,
+//   averageAmount: 100000,
+//   networkBreakdown: {
+//     MTN: 800,
+//     Airtel: 450
+//   },
+//   peakHours: ['14:00', '15:00', '20:00']
+// }
+```
+
+## Testing with HoneyCoin
+
+### Sandbox Environment
+
+```typescript
+// Sandbox configuration
+const sandboxClient = new PaymentClient({
+  honeycoin: {
+    apiKey: 'sk_sandbox_honeycoin_test_key',
+    environment: 'sandbox',
+    baseUrl: 'https://sandbox-api.honeycoin.io'
+  }
+});
+```
+
+### Test Phone Numbers
+
+```typescript
+// HoneyCoin sandbox test numbers
+const testNumbers = {
+  // Uganda - Always successful
+  successUG: '+256700000001',
+  // Uganda - Always fails
+  failureUG: '+256700000002',
+  // Uganda - Times out
+  timeoutUG: '+256700000003',
+  
+  // Kenya - Always successful  
+  successKE: '+254700000001',
+  // Kenya - Insufficient funds
+  insufficientKE: '+254700000002',
+  
+  // Tanzania - Always successful
+  successTZ: '+255700000001',
+  // Tanzania - Network error
+  networkErrorTZ: '+255700000002'
+};
+```
+
+### Testing Scenarios
+
+```typescript
+// Test successful payment
+const successTest = await sandboxClient.collect({
+  amount: 10000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.successUG,
+  reason: 'Test successful payment'
+});
+
+// Test failure scenarios
+const failureTest = await sandboxClient.collect({
+  amount: 50000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.failureUG,
+  reason: 'Test payment failure'
+});
+
+// Test timeout scenarios
+const timeoutTest = await sandboxClient.collect({
+  amount: 25000,
+  currency: 'UGX',
+  phoneNumber: testNumbers.timeoutUG,
+  reason: 'Test payment timeout'
+});
+```
+
+## Rate Limits
+
+### API Rate Limits
+
+| Environment | Requests per minute | Concurrent requests |
+|-------------|-------------------|-------------------|
+| Sandbox | 100 | 10 |
+| Production | 1000 | 50 |
+
+### Handling Rate Limits
+
+```typescript
+import { retry } from '@fundkit/core/utils';
+
+const collectWithRetry = retry(
+  async () => {
+    return await honeycoin.collect(request);
+  },
+  {
+    retries: 3,
+    delay: 1000,
+    backoff: 'exponential'
+  }
+);
+```
+
+## Best Practices
+
+### Performance Optimization
+
+1. **Reuse Connections**: Use connection pooling for multiple requests
+2. **Batch Operations**: Use bulk operations when possible
+3. **Cache Network Detection**: Cache network detection results
+4. **Optimize Polling**: Use webhooks instead of frequent status checks
+
+### Error Handling
+
+1. **Retry Transient Errors**: Implement retry logic for network errors
+2. **Handle Country-Specific Issues**: Different countries have different network behaviors
+3. **Monitor Network Status**: Track network maintenance windows
+4. **Graceful Degradation**: Handle single network failures gracefully
+
+### Security
+
+1. **Secure API Keys**: Store API keys securely
+2. **Validate Webhooks**: Always verify webhook signatures
+3. **Log Transactions**: Maintain audit logs for compliance
+4. **Monitor Fraud**: Implement fraud detection patterns
+
+### Integration
+
+1. **Test All Networks**: Test with different network providers
+2. **Handle Peak Times**: Account for network congestion during peak hours
+3. **Currency Conversion**: Handle multi-currency scenarios properly
+4. **Compliance**: Follow local regulations for each country

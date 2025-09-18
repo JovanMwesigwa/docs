@@ -1,0 +1,850 @@
+---
+title: "EasyPay Provider"
+description: "Complete guide to using EasyPay payment provider with FundKit"
+---
+
+## Overview
+
+EasyPay is Uganda's premier mobile money payment processor, offering fast and reliable payments through MTN and Airtel networks. Known for their exceptional speed and webhook reliability, EasyPay is perfect for businesses that need instant payment confirmation.
+
+<Info>
+  EasyPay specializes in rapid payment processing with average transaction completion times under 30 seconds, making it ideal for real-time applications and instant service delivery.
+</Info>
+
+## Coverage & Capabilities
+
+### Supported Networks
+
+<CardGroup cols={2}>
+  <Card title="MTN Mobile Money" icon="mobile">
+    **Coverage:** Uganda  
+    **Currency:** UGX  
+    **Features:** Collections, Status Check, Webhooks
+  </Card>
+  
+  <Card title="Airtel Money" icon="mobile">
+    **Coverage:** Uganda  
+    **Currency:** UGX  
+    **Features:** Collections, Status Check, Webhooks
+  </Card>
+</CardGroup>
+
+### Capabilities
+
+- ✅ **Fast Collections** - Average completion time < 30 seconds
+- ✅ **Real-time Webhooks** - Instant status notifications
+- ✅ **Status Checking** - Query transaction status anytime
+- ✅ **Bulk Processing** - Handle multiple transactions efficiently
+- ✅ **High Success Rate** - 98%+ success rate for valid transactions
+- ⏳ **Payouts** - Coming soon
+- ❌ **International** - Uganda only
+
+## Installation
+
+```bash
+npm install @fundkit/easypay
+```
+
+## Configuration
+
+### Basic Setup
+
+```typescript
+import { EasyPay } from '@fundkit/easypay';
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+  environment: 'sandbox' // or 'production'
+});
+```
+
+### Configuration Options
+
+<ParamField path="apiKey" type="string" required>
+  Your EasyPay secret key. This is your main authentication credential.
+</ParamField>
+
+<ParamField path="clientId" type="string" required>
+  Your EasyPay client ID. Used for API identification.
+</ParamField>
+
+<ParamField path="environment" type="'sandbox' | 'production'" default="sandbox">
+  Environment mode. Use `sandbox` for testing, `production` for live payments.
+</ParamField>
+
+<ParamField path="timeout" type="number" default="25000">
+  Request timeout in milliseconds. EasyPay is fast, so shorter timeouts work well.
+</ParamField>
+
+<ParamField path="retries" type="number" default="3">
+  Number of retry attempts for failed requests.
+</ParamField>
+
+<ParamField path="webhookUrl" type="string">
+  URL to receive real-time webhook notifications.
+</ParamField>
+
+### Advanced Configuration
+
+```typescript
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+  environment: 'production',
+  
+  // Performance tuning
+  timeout: 20000,                   // Shorter timeout for fast service
+  retries: 2,                       // Fewer retries needed
+  retryDelay: 1000,                 // Quick retry interval
+  
+  // Webhook configuration
+  webhookUrl: 'https://api.myapp.com/webhooks/easypay',
+  webhookSecret: process.env.EASYPAY_WEBHOOK_SECRET,
+  webhookEvents: ['payment.completed', 'payment.failed'],
+  
+  // Rate limiting (very generous limits)
+  rateLimit: {
+    requests: 1000,
+    window: 60000 // Per minute
+  },
+  
+  // API customization
+  baseUrl: 'https://api.easypay.ug',
+  apiVersion: 'v1',
+  
+  // Monitoring
+  logger: customLogger,
+  logLevel: 'info',
+  metrics: true
+});
+```
+
+## Getting API Credentials
+
+### Sandbox Credentials
+
+Get started immediately with sandbox testing:
+
+<Steps>
+  <Step title="Visit EasyPay Developer Portal">
+    Go to [developers.easypay.ug](https://developers.easypay.ug) and create an account
+  </Step>
+  
+  <Step title="Create Sandbox App">
+    Click "Create Application" and select "Sandbox Environment"
+  </Step>
+  
+  <Step title="Get Your Credentials">
+    Copy your Client ID and Secret Key from the dashboard
+  </Step>
+  
+  <Step title="Configure Environment">
+    ```bash
+    EASYPAY_CLIENT_ID=ep_test_client_your_id_here
+    EASYPAY_SECRET=ep_test_secret_your_key_here
+    ```
+  </Step>
+</Steps>
+
+### Production Credentials
+
+For live payments, complete EasyPay's streamlined onboarding:
+
+<Accordion title="Production Onboarding Process">
+  1. **Business Registration** - Submit business documents and details
+  2. **Quick Verification** - Automated verification (usually within 24 hours)
+  3. **Integration Test** - Complete a simple integration verification
+  4. **Go-Live** - Receive production credentials immediately after approval
+  
+  <Tip>
+    EasyPay has one of the fastest onboarding processes in Uganda, typically completed within 1-2 business days.
+  </Tip>
+</Accordion>
+
+## Usage Examples
+
+### Basic Payment Collection
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+import { EasyPay } from '@fundkit/easypay';
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+  environment: 'sandbox'
+});
+
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [easypay],
+  environment: 'sandbox'
+});
+
+// Process payment
+const transaction = {
+  amount: 15000,                     // 150.00 UGX
+  currency: 'UGX',
+  operator: 'mtn',                   // or 'airtel'
+  accountNumber: '256779280949',
+  externalId: 'invoice_67890',
+  reason: 'Service subscription'
+};
+
+try {
+  const result = await client.collection(transaction);
+  console.log('Payment initiated:', result);
+  
+  // EasyPay typically completes within 30 seconds
+  console.log('Expected completion: < 30 seconds');
+} catch (error) {
+  console.error('Payment failed:', error.message);
+}
+```
+
+### Express.js Integration
+
+```typescript
+import express from 'express';
+import { PaymentClient } from '@fundkit/core';
+import { EasyPay } from '@fundkit/easypay';
+
+const app = express();
+app.use(express.json());
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+  webhookUrl: 'https://api.myapp.com/webhooks/easypay'
+});
+
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [easypay]
+});
+
+// Payment endpoint
+app.post('/api/payments', async (req, res) => {
+  try {
+    const { amount, phoneNumber, orderId } = req.body;
+    
+    // Validate input
+    if (!amount || !phoneNumber || !orderId) {
+      return res.status(400).json({
+        error: 'Missing required fields: amount, phoneNumber, orderId'
+      });
+    }
+    
+    // Determine operator from phone number
+    const operator = phoneNumber.startsWith('25677') ? 'mtn' : 'airtel';
+    
+    const transaction = {
+      amount: amount,
+      currency: 'UGX',
+      operator: operator,
+      accountNumber: phoneNumber,
+      externalId: `order_${orderId}`,
+      reason: `Payment for order ${orderId}`
+    };
+    
+    const result = await client.collection(transaction);
+    
+    res.json({
+      success: true,
+      transactionId: result.data.transactionId,
+      status: result.data.status,
+      provider: result.provider,
+      message: 'Payment initiated successfully'
+    });
+    
+  } catch (error) {
+    console.error('Payment error:', error);
+    
+    res.status(400).json({
+      success: false,
+      error: error.code || 'PAYMENT_FAILED',
+      message: error.message || 'Payment failed'
+    });
+  }
+});
+```
+
+### Bulk Payment Processing
+
+```typescript
+async function processBulkPayments(payments: Array<PaymentRequest>) {
+  const results = [];
+  const batchSize = 10; // Process 10 at a time
+  
+  for (let i = 0; i < payments.length; i += batchSize) {
+    const batch = payments.slice(i, i + batchSize);
+    
+    console.log(`Processing batch ${Math.floor(i/batchSize) + 1}...`);
+    
+    const batchPromises = batch.map(async (payment) => {
+      try {
+        const result = await client.collection({
+          amount: payment.amount,
+          currency: 'UGX',
+          operator: payment.operator,
+          accountNumber: payment.phoneNumber,
+          externalId: payment.orderId,
+          reason: payment.description
+        });
+        
+        return {
+          orderId: payment.orderId,
+          success: true,
+          transactionId: result.data.transactionId
+        };
+      } catch (error) {
+        return {
+          orderId: payment.orderId,
+          success: false,
+          error: error.message
+        };
+      }
+    });
+    
+    const batchResults = await Promise.allSettled(batchPromises);
+    results.push(...batchResults.map(r => r.status === 'fulfilled' ? r.value : r.reason));
+    
+    // Brief pause between batches
+    if (i + batchSize < payments.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  return results;
+}
+```
+
+## Transaction Limits
+
+### Amount Limits
+
+- **Minimum Transaction:** 1,000 UGX
+- **Maximum Transaction:** 5,000,000 UGX
+- **Daily Limit:** 20,000,000 UGX per merchant
+- **Monthly Limit:** 100,000,000 UGX per merchant
+
+### Rate Limits
+
+- **API Requests:** 1,000 requests per minute
+- **Concurrent Transactions:** 100 simultaneous transactions
+- **Bulk Processing:** 1,000 transactions per batch
+
+<Warning>
+  These limits apply to sandbox as well. Contact EasyPay support if you need higher limits for testing or production.
+</Warning>
+
+## Error Handling
+
+### Common EasyPay Errors
+
+```typescript
+try {
+  const result = await client.collection(transaction);
+} catch (error) {
+  switch (error.code) {
+    case 'EP_INSUFFICIENT_FUNDS':
+      showMessage('Customer has insufficient balance', 'error');
+      // Suggest customer to top up
+      suggestTopUp(transaction.accountNumber);
+      break;
+      
+    case 'EP_INVALID_PHONE':
+      showMessage('Invalid phone number. Please check and try again.', 'error');
+      // Highlight phone input field for correction
+      highlightPhoneInput();
+      break;
+      
+    case 'EP_CUSTOMER_CANCELLED':
+      showMessage('Payment was cancelled by customer', 'info');
+      // Allow customer to retry
+      showRetryButton();
+      break;
+      
+    case 'EP_NETWORK_ERROR':
+      showMessage('Mobile network is temporarily unavailable', 'warning');
+      // Retry automatically after delay
+      scheduleRetry(transaction, 30000); // 30 seconds
+      break;
+      
+    case 'EP_DUPLICATE_EXTERNAL_ID':
+      showMessage('Duplicate transaction detected', 'error');
+      // Check if original transaction succeeded
+      await checkOriginalTransaction(transaction.externalId);
+      break;
+      
+    case 'EP_AMOUNT_LIMIT_EXCEEDED':
+      showMessage('Transaction amount exceeds limits', 'error');
+      // Show the actual limits to user
+      showAmountLimits();
+      break;
+      
+    default:
+      showMessage('Payment failed. Please try again.', 'error');
+      logUnknownError(error);
+  }
+}
+```
+
+### Error Categories
+
+<AccordionGroup>
+  <Accordion icon="credit-card" title="Payment Errors">
+    **EP_INSUFFICIENT_FUNDS** - Customer doesn't have enough money  
+    **EP_CUSTOMER_CANCELLED** - Customer declined the payment  
+    **EP_PAYMENT_TIMEOUT** - Customer didn't respond in time  
+    **EP_INVALID_PIN** - Wrong PIN entered multiple times
+  </Accordion>
+  
+  <Accordion icon="phone" title="Account Errors">
+    **EP_INVALID_PHONE** - Phone number format is wrong  
+    **EP_PHONE_NOT_REGISTERED** - Phone not registered for mobile money  
+    **EP_ACCOUNT_SUSPENDED** - Customer account is suspended  
+    **EP_DAILY_LIMIT_EXCEEDED** - Customer exceeded daily limits
+  </Accordion>
+  
+  <Accordion icon="server" title="System Errors">
+    **EP_NETWORK_ERROR** - Mobile network unavailable  
+    **EP_SERVICE_UNAVAILABLE** - EasyPay service down  
+    **EP_RATE_LIMITED** - Too many requests  
+    **EP_AUTHENTICATION_FAILED** - Invalid credentials
+  </Accordion>
+  
+  <Accordion icon="copy" title="Business Logic Errors">
+    **EP_DUPLICATE_EXTERNAL_ID** - External ID already used  
+    **EP_AMOUNT_TOO_SMALL** - Amount below minimum  
+    **EP_AMOUNT_TOO_LARGE** - Amount above maximum  
+    **EP_UNSUPPORTED_OPERATOR** - Invalid network operator
+  </Accordion>
+</AccordionGroup>
+
+## Webhooks
+
+### Real-time Status Updates
+
+EasyPay provides excellent webhook reliability with sub-second delivery:
+
+```typescript
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+  webhookUrl: 'https://api.myapp.com/webhooks/easypay',
+  webhookSecret: process.env.EASYPAY_WEBHOOK_SECRET
+});
+```
+
+### Webhook Handler Implementation
+
+```typescript
+import express from 'express';
+import crypto from 'crypto';
+
+const app = express();
+app.use(express.raw({ type: 'application/json' }));
+
+app.post('/webhooks/easypay', (req, res) => {
+  const signature = req.headers['x-easypay-signature'];
+  const timestamp = req.headers['x-easypay-timestamp'];
+  const payload = req.body;
+  
+  // Verify webhook authenticity
+  if (!verifyEasyPayWebhook(payload, signature, timestamp)) {
+    console.error('Invalid webhook signature');
+    return res.status(400).json({ error: 'Invalid signature' });
+  }
+  
+  const event = JSON.parse(payload.toString());
+  console.log('Received webhook:', event.type, event.data.externalId);
+  
+  // Handle different event types
+  switch (event.type) {
+    case 'payment.completed':
+      handlePaymentCompleted(event.data);
+      break;
+      
+    case 'payment.failed':
+      handlePaymentFailed(event.data);
+      break;
+      
+    case 'payment.pending':
+      handlePaymentPending(event.data);
+      break;
+      
+    case 'payment.timeout':
+      handlePaymentTimeout(event.data);
+      break;
+      
+    default:
+      console.log('Unknown webhook event:', event.type);
+  }
+  
+  // Always respond quickly to webhooks
+  res.status(200).json({ received: true, processed: true });
+});
+
+function verifyEasyPayWebhook(payload, signature, timestamp) {
+  // Check timestamp to prevent replay attacks
+  const now = Math.floor(Date.now() / 1000);
+  const webhookTimestamp = parseInt(timestamp);
+  
+  if (Math.abs(now - webhookTimestamp) > 300) { // 5 minutes
+    return false;
+  }
+  
+  // Verify signature
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.EASYPAY_WEBHOOK_SECRET!)
+    .update(`${timestamp}.${payload}`)
+    .digest('hex');
+    
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+
+async function handlePaymentCompleted(payment) {
+  console.log('Payment completed:', payment.externalId);
+  
+  try {
+    // Update your database
+    await updatePaymentStatus(payment.externalId, 'completed', {
+      transactionId: payment.transactionId,
+      completedAt: payment.completedAt,
+      fees: payment.fees,
+      netAmount: payment.netAmount
+    });
+    
+    // Send success notification to customer
+    await sendSMS(payment.customerPhone, 
+      `Payment of ${payment.amount} UGX received successfully. Thank you!`);
+    
+    // Fulfill the order/service
+    await fulfillOrder(payment.externalId);
+    
+    // Send confirmation email
+    await sendConfirmationEmail(payment.customerEmail, payment);
+    
+  } catch (error) {
+    console.error('Error processing completed payment:', error);
+    // Consider implementing a retry mechanism
+  }
+}
+
+async function handlePaymentFailed(payment) {
+  console.log('Payment failed:', payment.externalId, payment.errorCode);
+  
+  try {
+    // Update payment status
+    await updatePaymentStatus(payment.externalId, 'failed', {
+      errorCode: payment.errorCode,
+      errorMessage: payment.errorMessage,
+      failedAt: payment.failedAt
+    });
+    
+    // Notify customer with helpful message
+    const userMessage = getFriendlyErrorMessage(payment.errorCode);
+    await sendSMS(payment.customerPhone, userMessage);
+    
+    // Log for analysis
+    await logFailedPayment(payment);
+    
+  } catch (error) {
+    console.error('Error processing failed payment:', error);
+  }
+}
+```
+
+### Webhook Events
+
+<CardGroup cols={2}>
+  <Card title="payment.completed" icon="check-circle">
+    Payment successful - money transferred
+  </Card>
+  
+  <Card title="payment.failed" icon="x-circle">
+    Payment failed - includes error details
+  </Card>
+  
+  <Card title="payment.pending" icon="clock">
+    Payment initiated - waiting for customer
+  </Card>
+  
+  <Card title="payment.timeout" icon="clock-exclamation">
+    Payment timed out - customer didn't respond
+  </Card>
+</CardGroup>
+
+## Testing in Sandbox
+
+### Test Phone Numbers
+
+EasyPay provides predictable test numbers for different scenarios:
+
+```typescript
+const testScenarios = {
+  // MTN test numbers
+  mtnSuccess: '256777000001',        // Always succeeds quickly
+  mtnInsufficientFunds: '256777000002', // Always fails - no money
+  mtnTimeout: '256777000003',        // Always times out
+  mtnCancelled: '256777000004',      // Customer cancels
+  mtnSlowSuccess: '256777000005',    // Succeeds after 20 seconds
+  
+  // Airtel test numbers
+  airtelSuccess: '256701000001',     // Always succeeds quickly
+  airtelFailed: '256701000002',      // Always fails
+  airtelSlow: '256701000003',        // Succeeds after delay
+  
+  // Invalid numbers
+  invalidFormat: '123456789',        // Wrong format
+  unregistered: '256777999999'       // Not registered
+};
+
+// Test different scenarios
+async function runTestSuite() {
+  const scenarios = [
+    { name: 'MTN Success', phone: testScenarios.mtnSuccess },
+    { name: 'MTN Insufficient Funds', phone: testScenarios.mtnInsufficientFunds },
+    { name: 'Airtel Success', phone: testScenarios.airtelSuccess },
+    { name: 'Invalid Format', phone: testScenarios.invalidFormat }
+  ];
+  
+  for (const scenario of scenarios) {
+    console.log(`Testing: ${scenario.name}`);
+    
+    try {
+      const result = await client.collection({
+        amount: 5000,
+        currency: 'UGX',
+        operator: scenario.phone.startsWith('25677') ? 'mtn' : 'airtel',
+        accountNumber: scenario.phone,
+        externalId: `test_${Date.now()}_${Math.random()}`,
+        reason: `Test: ${scenario.name}`
+      });
+      
+      console.log(`✅ ${scenario.name}: Success`, result.data.status);
+    } catch (error) {
+      console.log(`❌ ${scenario.name}: ${error.code} - ${error.message}`);
+    }
+    
+    // Brief pause between tests
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+}
+```
+
+### Performance Testing
+
+```typescript
+async function testPerformance() {
+  const startTime = Date.now();
+  const concurrentTransactions = 50;
+  
+  console.log(`Starting ${concurrentTransactions} concurrent transactions...`);
+  
+  const promises = Array.from({ length: concurrentTransactions }, (_, i) => 
+    client.collection({
+      amount: 1000,
+      currency: 'UGX',
+      operator: 'mtn',
+      accountNumber: testScenarios.mtnSuccess,
+      externalId: `perf_test_${Date.now()}_${i}`,
+      reason: 'Performance test'
+    }).catch(error => ({ error: error.message }))
+  );
+  
+  const results = await Promise.all(promises);
+  const successCount = results.filter(r => !r.error).length;
+  const duration = Date.now() - startTime;
+  
+  console.log(`Results: ${successCount}/${concurrentTransactions} successful`);
+  console.log(`Duration: ${duration}ms`);
+  console.log(`Average: ${Math.round(duration / concurrentTransactions)}ms per transaction`);
+}
+```
+
+## Production Optimization
+
+### Connection Pooling
+
+```typescript
+import { Agent } from 'https';
+
+const httpsAgent = new Agent({
+  keepAlive: true,
+  maxSockets: 50,
+  maxFreeSockets: 10,
+  timeout: 20000
+});
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+  httpsAgent: httpsAgent,
+  timeout: 20000 // Shorter timeout for EasyPay's fast service
+});
+```
+
+### Monitoring and Metrics
+
+```typescript
+class EasyPayMetrics {
+  private metrics = {
+    totalTransactions: 0,
+    successfulTransactions: 0,
+    failedTransactions: 0,
+    averageResponseTime: 0,
+    responseTimeSum: 0
+  };
+  
+  recordTransaction(success: boolean, responseTime: number) {
+    this.metrics.totalTransactions++;
+    this.metrics.responseTimeSum += responseTime;
+    this.metrics.averageResponseTime = 
+      this.metrics.responseTimeSum / this.metrics.totalTransactions;
+    
+    if (success) {
+      this.metrics.successfulTransactions++;
+    } else {
+      this.metrics.failedTransactions++;
+    }
+  }
+  
+  getSuccessRate(): number {
+    if (this.metrics.totalTransactions === 0) return 0;
+    return this.metrics.successfulTransactions / this.metrics.totalTransactions;
+  }
+  
+  getMetrics() {
+    return {
+      ...this.metrics,
+      successRate: this.getSuccessRate()
+    };
+  }
+}
+
+// Usage
+const metrics = new EasyPayMetrics();
+
+const originalCollection = client.collection;
+client.collection = async function(transaction) {
+  const startTime = Date.now();
+  
+  try {
+    const result = await originalCollection.call(this, transaction);
+    metrics.recordTransaction(true, Date.now() - startTime);
+    return result;
+  } catch (error) {
+    metrics.recordTransaction(false, Date.now() - startTime);
+    throw error;
+  }
+};
+
+// Log metrics every minute
+setInterval(() => {
+  console.log('EasyPay Metrics:', metrics.getMetrics());
+}, 60000);
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card icon="bolt" title="Leverage Speed">
+    ```typescript
+    // Good: Use shorter timeouts with EasyPay
+    const easypay = new EasyPay({
+      apiKey: process.env.EASYPAY_SECRET!,
+      clientId: process.env.EASYPAY_CLIENT_ID!,
+      timeout: 20000 // 20 seconds is plenty
+    });
+    ```
+  </Card>
+  
+  <Card icon="webhook" title="Use Webhooks">
+    ```typescript
+    // Good: Always configure webhooks
+    const easypay = new EasyPay({
+      apiKey: process.env.EASYPAY_SECRET!,
+      clientId: process.env.EASYPAY_CLIENT_ID!,
+      webhookUrl: 'https://api.myapp.com/webhooks/easypay'
+    });
+    
+    // Bad: Polling for status
+    // setInterval(() => checkStatus(), 5000);
+    ```
+  </Card>
+  
+  <Card icon="shield-check" title="Validate Phone Numbers">
+    ```typescript
+    // Good: Validate phone numbers
+    function validateUgandanPhone(phone: string): boolean {
+      return /^256(77|78|70|75|74)[0-9]{7}$/.test(phone);
+    }
+    
+    if (!validateUgandanPhone(phoneNumber)) {
+      throw new Error('Invalid Ugandan phone number');
+    }
+    ```
+  </Card>
+  
+  <Card icon="retry" title="Smart Retry Logic">
+    ```typescript
+    // Good: Don't retry validation errors
+    if (error.code === 'EP_INVALID_PHONE') {
+      throw error; // Don't retry
+    }
+    
+    // Retry system errors only
+    if (error.code === 'EP_NETWORK_ERROR') {
+      await retryAfterDelay(5000);
+    }
+    ```
+  </Card>
+</CardGroup>
+
+## Support & Resources
+
+<CardGroup cols={2}>
+  <Card title="EasyPay Documentation" icon="book" href="https://docs.easypay.ug">
+    Official EasyPay API documentation
+  </Card>
+  
+  <Card title="Developer Portal" icon="code" href="https://developers.easypay.ug">
+    Get API keys and manage applications
+  </Card>
+  
+  <Card title="Status Page" icon="chart-line" href="https://status.easypay.ug">
+    Check EasyPay service status
+  </Card>
+  
+  <Card title="Support" icon="headset" href="mailto:developers@easypay.ug">
+    Contact EasyPay developer support
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Tola Provider" icon="building-columns" href="/providers/tola">
+  Learn about Tola banking integration
+</Card>
+
+<Card title="Multi-Provider Setup" icon="layer-group" href="/core/providers">
+  Combine EasyPay with other providers
+</Card>
+
+<Card title="Webhooks Guide" icon="webhook" href="/advanced/webhooks">
+  Master webhook implementation
+</Card>
+
+<Card title="Production Deployment" icon="rocket" href="/advanced/production">
+  Deploy EasyPay to production
+</Card>
+
+</CardGroup>

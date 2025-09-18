@@ -1,97 +1,128 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: 'FundKit Documentation'
+description: 'One SDK. Every mobile money & card provider. Sandbox to production without rewrites.'
 ---
 
-## Setting up
+## Welcome to FundKit
 
-Get your documentation site up and running in minutes.
+FundKit is a **universal payment SDK** that gives developers one unified API across all major mobile money and card providers in Africa.
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Instead of waiting weeks for provider approvals, your team can start building **immediately** in FundKit’s sandbox environment. By the time your compliance team is done with paperwork, your app is already tested, integrated, and ready for production — just swap in live keys, no code changes required.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with FundKit in under 5 minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Core Concepts" icon="lightbulb" href="/core/payment-client">
+    Learn the fundamental concepts of FundKit
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="API Reference" icon="code" href="/api-reference/payment-client">
+    Detailed API documentation and examples
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Providers" icon="plug" href="/providers/honeycoin">
+    Explore supported payment providers
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Why FundKit?
 
-Everything you need to create world-class documentation.
+Integrating mobile money and card providers is painful:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+- Every provider has its own APIs, authentication, and quirks
+- You can't properly test until your compliance paperwork is approved
+- Developers get blocked while compliance teams work
+- Switching providers often means rewriting your entire integration
 
-## Need inspiration?
+### FundKit solves this
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
+<AccordionGroup>
+  <Accordion icon="rocket" title="Simulate payments instantly">
+    Start building today with our unified sandbox — no provider approval required.
+  </Accordion>
+
+<Accordion icon="hammer" title="Unblock your developers">
+  Keep shipping features while compliance paperwork is in progress.
+</Accordion>
+
+<Accordion icon="key" title="Zero-rewrite production switch">
+  When compliance is done, just swap sandbox keys for live keys — no code changes.
+</Accordion>
+
+  <Accordion icon="globe" title="Universal API layer">
+    One consistent API across MTN, Airtel, Safaricom, HoneyCoin, EasyPay, and more.
+  </Accordion>
+</AccordionGroup>
+
+## Features
+
+<CardGroup cols={3}>
+  <Card icon="check" title="Unified Collections & Payouts">
+    Single API for all payment operations
+  </Card>
+  <Card icon="flask" title="Instant Sandbox Testing">
+    Simulate transactions without waiting for provider approval
+  </Card>
+  <Card icon="arrows-rotate" title="Easy Provider Switching">
+    Change providers without rewriting your code
+  </Card>
+  <Card icon="webhook" title="Webhook Support">
+    Real-time transaction lifecycle updates
+  </Card>
+  <Card icon="shield" title="Built-in Validation">
+    Strict input validation with clear error messages
+  </Card>
+  <Card icon="chart-line" title="Smart Provider Selection">
+    Automatic failover and load balancing
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+<Steps>
+  <Step title="Install FundKit Core">
+    ```bash
+    npm install @fundkit/core
+    ```
+  </Step>
+  <Step title="Choose Your Providers">
+    ```bash
+    npm install @fundkit/honeycoin @fundkit/easypay
+    ```
+  </Step>
+  <Step title="Start Building">
+    ```typescript
+    import { PaymentClient } from '@fundkit/core';
+    import { HoneyCoin } from '@fundkit/honeycoin';
+
+    const client = new PaymentClient({
+      apiKey: 'your-api-key',
+      environment: 'sandbox',
+      providers: [new HoneyCoin(config)],
+    });
+    ```
+
+  </Step>
+</Steps>
+
+## Popular Use Cases
+
+<CardGroup cols={2}>
+  <Card title="E-commerce Checkout" icon="shopping-cart" href="/examples/ecommerce">
+    Accept payments from customers across multiple providers
+  </Card>
+  <Card title="Subscription Billing" icon="calendar" href="/examples/subscriptions">
+    Automate recurring payments with intelligent fallbacks
+  </Card>
+  <Card title="Marketplace Payouts" icon="users" href="/examples/marketplace">
+    Distribute earnings to sellers across different networks
+  </Card>
+  <Card title="P2P Transfers" icon="exchange" href="/examples/p2p">
+    Enable peer-to-peer money transfers
+  </Card>
+</CardGroup>
+
+## Ready to build?
+
+<Card title="Start with the Quickstart Guide" icon="play" href="/quickstart">
+  Build your first payment integration in 5 minutes
 </Card>

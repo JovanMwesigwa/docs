@@ -1,0 +1,425 @@
+---
+title: "PaymentClient"
+description: "The main entry point for processing payments with FundKit"
+---
+
+## Overview
+
+The `PaymentClient` is the central orchestrator in FundKit. It manages multiple payment providers, handles smart provider selection, validates transactions, and provides a unified interface for all payment operations.
+
+<Info>
+  Think of PaymentClient as your payment conductor - it knows which providers are available, their capabilities, and automatically routes transactions to the best provider for each situation.
+</Info>
+
+## Basic Usage
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
+import { EasyPay } from '@fundkit/easypay';
+
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [
+    new HoneyCoin({
+      apiKey: process.env.HONEYCOIN_API_KEY!,
+      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+    }),
+    new EasyPay({
+      apiKey: process.env.EASYPAY_SECRET!,
+      clientId: process.env.EASYPAY_CLIENT_ID!,
+    })
+  ],
+  environment: 'sandbox'
+});
+```
+
+## Configuration
+
+### Required Configuration
+
+<ParamField path="apiKey" type="string" required>
+  Your FundKit API key. Use `fk_test_` prefixed keys for sandbox mode.
+</ParamField>
+
+<ParamField path="providers" type="BaseProvider[]" required>
+  Array of configured payment provider instances. Must include at least one provider.
+</ParamField>
+
+### Optional Configuration
+
+<ParamField path="environment" type="'sandbox' | 'production'" default="sandbox">
+  Environment mode. Use `sandbox` for testing, `production` for live payments.
+</ParamField>
+
+<ParamField path="timeout" type="number" default="30000">
+  Request timeout in milliseconds for provider API calls.
+</ParamField>
+
+<ParamField path="retries" type="number" default="3">
+  Number of retry attempts for failed provider requests.
+</ParamField>
+
+<ParamField path="logger" type="Logger" default="console">
+  Custom logger instance for debugging and monitoring.
+</ParamField>
+
+### Advanced Configuration
+
+```typescript
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [honeycoin, easypay],
+  environment: 'production',
+  
+  // Advanced options
+  timeout: 45000,           // 45 second timeout
+  retries: 5,               // Retry failed requests 5 times
+  retryDelay: 1000,         // Wait 1 second between retries
+  
+  // Provider selection strategy
+  strategy: 'round-robin',  // 'smart', 'round-robin', 'priority'
+  
+  // Event handlers
+  onSuccess: (transaction) => console.log('Payment succeeded:', transaction.id),
+  onFailure: (error) => console.error('Payment failed:', error),
+  
+  // Custom logger
+  logger: {
+    info: (msg) => logger.info(msg),
+    error: (msg) => logger.error(msg),
+    debug: (msg) => logger.debug(msg)
+  }
+});
+```
+
+## Core Methods
+
+### collection()
+
+Process a payment collection (charge customer):
+
+```typescript
+const transaction = {
+  amount: 10000,              // Amount in smallest unit (e.g., cents)
+  currency: 'UGX',
+  operator: 'mtn',
+  accountNumber: '256779280949',
+  externalId: 'order_12345',
+  reason: 'Order payment'
+};
+
+try {
+  const result = await client.collection(transaction);
+  console.log('Payment initiated:', result);
+} catch (error) {
+  console.error('Payment failed:', error);
+}
+```
+
+**Response:**
+```typescript
+{
+  provider: 'honeycoin',
+  data: {
+    transactionId: 'txn_abc123',
+    status: 'pending',
+    amount: 10000,
+    currency: 'UGX',
+    externalId: 'order_12345',
+    reference: 'HC_REF_456'
+  }
+}
+```
+
+### getTransaction()
+
+Check the status of a transaction:
+
+```typescript
+const status = await client.getTransaction({
+  provider: 'honeycoin',
+  txId: 'txn_abc123'
+});
+
+console.log('Transaction status:', status);
+```
+
+**Response:**
+```typescript
+{
+  id: 'txn_abc123',
+  status: 'completed',
+  amount: 10000,
+  currency: 'UGX',
+  externalId: 'order_12345',
+  completedAt: '2024-01-15T10:30:00Z',
+  fees: 100,
+  provider: 'honeycoin'
+}
+```
+
+### payout() (Coming Soon)
+
+Send money to a recipient:
+
+```typescript
+const payout = await client.payout({
+  amount: 50000,
+  currency: 'UGX',
+  operator: 'airtel',
+  accountNumber: '256701234567',
+  externalId: 'payout_789',
+  reason: 'Seller payment'
+});
+```
+
+## Smart Provider Selection
+
+PaymentClient automatically selects the best provider based on multiple factors:
+
+<AccordionGroup>
+  <Accordion icon="globe" title="Currency Coverage">
+    Ensures the selected provider supports the transaction currency.
+    
+    ```typescript
+    // Will automatically choose a provider that supports KES
+    const transaction = {
+      amount: 1000,
+      currency: 'KES', // Kenyan Shillings
+      operator: 'safaricom',
+      accountNumber: '254701234567'
+    };
+    ```
+  </Accordion>
+  
+  <Accordion icon="chart-line" title="Amount Limits">
+    Respects minimum and maximum transaction amounts for each provider.
+    
+    ```typescript
+    // Large transaction - will choose provider with higher limits
+    const transaction = {
+      amount: 5000000, // 50,000 UGX
+      currency: 'UGX'
+    };
+    ```
+  </Accordion>
+  
+  <Accordion icon="signal" title="Provider Health">
+    Monitors provider uptime and success rates, avoiding unhealthy providers.
+    
+    ```typescript
+    // Will skip providers with recent failures
+    // and choose the most reliable option
+    ```
+  </Accordion>
+  
+  <Accordion icon="clock" title="Response Times">
+    Considers average response times and chooses faster providers when possible.
+  </Accordion>
+</AccordionGroup>
+
+### Manual Provider Selection
+
+You can also manually specify which provider to use:
+
+```typescript
+const result = await client.collection(transaction, {
+  preferredProvider: 'easypay'
+});
+```
+
+## Event Handling
+
+PaymentClient emits events for monitoring and debugging:
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+
+const client = new PaymentClient(config);
+
+// Listen for events
+client.on('transaction:started', (transaction) => {
+  console.log('Transaction started:', transaction.externalId);
+});
+
+client.on('transaction:completed', (transaction) => {
+  console.log('Transaction completed:', transaction.id);
+});
+
+client.on('transaction:failed', (error, transaction) => {
+  console.error('Transaction failed:', error.message);
+});
+
+client.on('provider:selected', (provider, transaction) => {
+  console.log(`Selected ${provider} for transaction ${transaction.externalId}`);
+});
+
+client.on('provider:fallback', (fromProvider, toProvider, reason) => {
+  console.log(`Falling back from ${fromProvider} to ${toProvider}: ${reason}`);
+});
+```
+
+## Environment Modes
+
+### Sandbox Mode
+
+Perfect for development and testing:
+
+```typescript
+const client = new PaymentClient({
+  apiKey: 'fk_test_sandbox_key',
+  providers: [honeycoin, easypay],
+  environment: 'sandbox'
+});
+
+// All transactions will be simulated
+// No real money is moved
+// Instant responses for testing
+```
+
+**Sandbox Benefits:**
+- ✅ No provider approval needed
+- ✅ Instant testing
+- ✅ Predictable responses
+- ✅ No real money involved
+- ✅ All providers available immediately
+
+### Production Mode
+
+For live transactions:
+
+```typescript
+const client = new PaymentClient({
+  apiKey: 'fk_live_production_key',
+  providers: [honeycoin, easypay],
+  environment: 'production'
+});
+
+// Real transactions with actual money
+// Requires provider approval and live credentials
+```
+
+**Production Requirements:**
+- ⚠️ Provider compliance approval
+- ⚠️ Live API credentials
+- ⚠️ Webhook endpoints configured
+- ⚠️ Error handling implemented
+- ⚠️ Monitoring and alerting setup
+
+## Error Handling
+
+PaymentClient provides structured error handling:
+
+```typescript
+import { PaymentClient, FundKitError } from '@fundkit/core';
+
+try {
+  const result = await client.collection(transaction);
+} catch (error) {
+  if (error instanceof FundKitError) {
+    console.error('FundKit Error:', {
+      code: error.code,
+      message: error.message,
+      provider: error.context?.provider,
+      details: error.details
+    });
+    
+    // Handle specific error types
+    switch (error.code) {
+      case 'INSUFFICIENT_FUNDS':
+        // Show user-friendly message
+        break;
+      case 'INVALID_PHONE_NUMBER':
+        // Ask user to verify phone number
+        break;
+      case 'PROVIDER_UNAVAILABLE':
+        // Try again or use different provider
+        break;
+    }
+  } else {
+    // Unexpected error
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card icon="shield-check" title="Always Validate Input">
+    ```typescript
+    // Good: Validate before sending
+    if (!transaction.accountNumber) {
+      throw new Error('Account number required');
+    }
+    
+    const result = await client.collection(transaction);
+    ```
+  </Card>
+  
+  <Card icon="arrows-rotate" title="Handle Failures Gracefully">
+    ```typescript
+    // Good: Implement retry logic
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        return await client.collection(transaction);
+      } catch (error) {
+        attempts++;
+        if (attempts === 3) throw error;
+        await sleep(1000 * attempts);
+      }
+    }
+    ```
+  </Card>
+  
+  <Card icon="clock" title="Set Appropriate Timeouts">
+    ```typescript
+    // Good: Configure timeouts
+    const client = new PaymentClient({
+      ...config,
+      timeout: 30000, // 30 seconds
+    });
+    ```
+  </Card>
+  
+  <Card icon="chart-line" title="Monitor Transaction Status">
+    ```typescript
+    // Good: Poll for status updates
+    const checkStatus = async (txId) => {
+      let status = 'pending';
+      while (status === 'pending') {
+        const result = await client.getTransaction({ txId });
+        status = result.status;
+        if (status === 'pending') {
+          await sleep(5000); // Wait 5 seconds
+        }
+      }
+      return status;
+    };
+    ```
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Learn About Providers" icon="plug" href="/core/providers">
+  Understanding payment providers and their capabilities
+</Card>
+
+<Card title="Transaction Lifecycle" icon="arrows-spin" href="/core/transactions">
+  How transactions flow through the system
+</Card>
+
+<Card title="Error Handling" icon="shield-exclamation" href="/core/error-handling">
+  Comprehensive error handling strategies
+</Card>
+
+<Card title="API Reference" icon="code" href="/api-reference/payment-client">
+  Complete PaymentClient API documentation
+</Card>
+
+</CardGroup>
