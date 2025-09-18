@@ -1,6 +1,6 @@
 ---
-title: "Quickstart"
-description: "Get up and running with FundKit in under 5 minutes"
+title: 'Quickstart'
+description: 'Get up and running with FundKit in under 5 minutes'
 ---
 
 ## Build your first payment integration
@@ -36,6 +36,7 @@ This quickstart guide will walk you through setting up FundKit and processing yo
     ```
 
     </CodeGroup>
+
   </Tab>
 
   <Tab title="Python">
@@ -54,12 +55,6 @@ This quickstart guide will walk you through setting up FundKit and processing yo
             <p>
               We're actively developing a Python version of FundKit that will provide the same seamless payment processing capabilities.
             </p>
-            <p className="mt-2">
-              <strong>Expected release:</strong> Q2 2024
-            </p>
-            <p className="mt-2">
-              Want early access? <a href="mailto:python@fundkit.dev" className="font-medium underline">Join our Python beta waitlist</a>
-            </p>
           </div>
         </div>
       </div>
@@ -71,25 +66,16 @@ This quickstart guide will walk you through setting up FundKit and processing yo
 
 <AccordionGroup>
   <Accordion icon="flask" title="Sandbox Keys (Recommended for testing)">
-    For testing, you can use FundKit's unified sandbox:
-    
-    ```bash
-    FUNDKIT_API_KEY=fk_test_your_sandbox_key_here
-    ```
-    
+    For testing, you can use FundKit's unified sandbox: ```bash
+    FUNDKIT_API_KEY=fk_test_your_sandbox_key_here ```
     <Tip>Sandbox keys let you test immediately without provider approval!</Tip>
   </Accordion>
-  
+
   <Accordion icon="key" title="Provider Keys (For production)">
-    Get API keys from your chosen providers:
-    
-    **HoneyCoin:**
-    - Sign up at [honeycoin.io](https://honeycoin.io)
-    - Get your API key and public key from the dashboard
-    
-    **EasyPay:**
-    - Register at [easypay.ug](https://easypay.ug) 
-    - Obtain your client ID and API secret
+    Get API keys from your chosen providers: **HoneyCoin:** - Sign up at
+    [honeycoin.io](https://honeycoin.io) - Get your API key and public key from the dashboard
+    **EasyPay:** - Register at [easypay.ug](https://easypay.ug) - Obtain your client ID and API
+    secret
   </Accordion>
 </AccordionGroup>
 
@@ -138,6 +124,7 @@ This quickstart guide will walk you through setting up FundKit and processing yo
     ```
 
     </CodeGroup>
+
   </Tab>
 
   <Tab title="Python">
@@ -165,7 +152,7 @@ This quickstart guide will walk you through setting up FundKit and processing yo
           phoneNumber: '+256701234567',
           reason: 'Test payment from FundKit'
         });
-        
+
         console.log('Payment initiated:', {
           provider: result.provider,
           transactionId: result.data.transactionId,
@@ -177,9 +164,9 @@ This quickstart guide will walk you through setting up FundKit and processing yo
           result.data.transactionId,
           result.provider
         );
-        
+
         console.log('Payment status:', status.data.status);
-        
+
       } catch (error) {
         console.error('Payment failed:', error.message);
       }
@@ -200,7 +187,7 @@ This quickstart guide will walk you through setting up FundKit and processing yo
           phoneNumber: '+256701234567',
           reason: 'Test payment from FundKit'
         });
-        
+
         console.log('Payment initiated:', {
           provider: result.provider,
           transactionId: result.data.transactionId,
@@ -212,9 +199,9 @@ This quickstart guide will walk you through setting up FundKit and processing yo
           result.data.transactionId,
           result.provider
         );
-        
+
         console.log('Payment status:', status.data.status);
-        
+
       } catch (error) {
         console.error('Payment failed:', error.message);
       }
@@ -224,6 +211,7 @@ This quickstart guide will walk you through setting up FundKit and processing yo
     ```
 
     </CodeGroup>
+
   </Tab>
 
   <Tab title="Python">
@@ -251,6 +239,7 @@ This quickstart guide will walk you through setting up FundKit and processing yo
     # or for TypeScript:
     npx tsx payment.ts
     ```
+
   </Tab>
 
   <Tab title="Python">
@@ -306,7 +295,8 @@ You should see output similar to:
 </CardGroup>
 
 <Warning>
-  **Important:** Always use sandbox mode for testing. Switch to production mode only when you're ready to process real payments.
+  **Important:** Always use sandbox mode for testing. Switch to production mode only when you're
+  ready to process real payments.
 </Warning>
 
 ## Need Help?
