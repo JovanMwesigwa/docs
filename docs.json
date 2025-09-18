@@ -81,7 +81,7 @@
     "primary": {
       "type": "button",
       "label": "Get Started",
-      "href": "https://docs.fundkit.dev/quickstart"
+      "href": "https://www.fundkit.dev/dashboard"
     }
   },
   "contextual": {
