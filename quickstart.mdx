@@ -7,33 +7,65 @@ description: "Get up and running with FundKit in under 5 minutes"
 
 This quickstart guide will walk you through setting up FundKit and processing your first payment in just a few minutes.
 
-<Info>
-  **Prerequisites:** Node.js 16+ and npm/yarn/pnpm/bun installed on your machine.
-</Info>
+<Tabs>
+  <Tab title="JavaScript/TypeScript">
+    <Info>
+      **Prerequisites:** Node.js 16+ and npm/yarn/pnpm/bun installed on your machine.
+    </Info>
 
-## Step 1: Install FundKit
+    ## Step 1: Install FundKit
 
-Install the core package and your chosen providers:
+    Install the core package and your chosen providers:
 
-<CodeGroup>
+    <CodeGroup>
 
-```bash npm
-npm install @fundkit/core @fundkit/honeycoin @fundkit/easypay
-```
+    ```bash npm
+    npm install @fundkit/core @fundkit/honeycoin @fundkit/easypay
+    ```
 
-```bash yarn
-yarn add @fundkit/core @fundkit/honeycoin @fundkit/easypay
-```
+    ```bash yarn
+    yarn add @fundkit/core @fundkit/honeycoin @fundkit/easypay
+    ```
 
-```bash pnpm
-pnpm add @fundkit/core @fundkit/honeycoin @fundkit/easypay
-```
+    ```bash pnpm
+    pnpm add @fundkit/core @fundkit/honeycoin @fundkit/easypay
+    ```
 
-```bash bun
-bun add @fundkit/core @fundkit/honeycoin @fundkit/easypay
-```
+    ```bash bun
+    bun add @fundkit/core @fundkit/honeycoin @fundkit/easypay
+    ```
 
-</CodeGroup>
+    </CodeGroup>
+  </Tab>
+
+  <Tab title="Python">
+    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+      <div className="flex">
+        <div className="flex-shrink-0">
+          <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div className="ml-3">
+          <h3 className="text-sm font-medium text-blue-800">
+            Python SDK Coming Soon
+          </h3>
+          <div className="mt-2 text-sm text-blue-700">
+            <p>
+              We're actively developing a Python version of FundKit that will provide the same seamless payment processing capabilities.
+            </p>
+            <p className="mt-2">
+              <strong>Expected release:</strong> Q2 2024
+            </p>
+            <p className="mt-2">
+              Want early access? <a href="mailto:python@fundkit.dev" className="font-medium underline">Join our Python beta waitlist</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Tab>
+</Tabs>
 
 ## Step 2: Get API Keys
 
@@ -63,189 +95,193 @@ bun add @fundkit/core @fundkit/honeycoin @fundkit/easypay
 
 ## Step 3: Initialize the Payment Client
 
-Create a new file `payment.js` (or `payment.ts` for TypeScript):
+<Tabs>
+  <Tab title="JavaScript/TypeScript">
+    Create a new file `payment.js` (or `payment.ts` for TypeScript):
 
-<CodeGroup>
+    <CodeGroup>
 
-```typescript TypeScript
-import { PaymentClient } from '@fundkit/core';
-import { HoneyCoin } from '@fundkit/honeycoin';
-import { EasyPay } from '@fundkit/easypay';
+    ```typescript TypeScript
+    import { PaymentClient } from '@fundkit/core';
 
-// Initialize providers
-const honeycoin = new HoneyCoin({
-  apiKey: process.env.HONEYCOIN_API_KEY!,
-  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-});
+    // Create payment client
+    const client = new PaymentClient({
+      honeycoin: {
+        apiKey: process.env.HONEYCOIN_API_KEY!,
+        environment: 'sandbox'
+      },
+      easypay: {
+        apiKey: process.env.EASYPAY_API_KEY!,
+        environment: 'sandbox'
+      }
+    });
 
-const easypay = new EasyPay({
-  apiKey: process.env.EASYPAY_SECRET!,
-  clientId: process.env.EASYPAY_CLIENT_ID!,
-});
+    export default client;
+    ```
 
-// Create payment client
-const client = new PaymentClient({
-  apiKey: process.env.FUNDKIT_API_KEY!,
-  providers: [honeycoin, easypay],
-  environment: 'sandbox', // Use 'production' for live transactions
-});
+    ```javascript JavaScript
+    const { PaymentClient } = require('@fundkit/core');
 
-export default client;
-```
+    // Create payment client
+    const client = new PaymentClient({
+      honeycoin: {
+        apiKey: process.env.HONEYCOIN_API_KEY,
+        environment: 'sandbox'
+      },
+      easypay: {
+        apiKey: process.env.EASYPAY_API_KEY,
+        environment: 'sandbox'
+      }
+    });
 
-```javascript JavaScript
-const { PaymentClient } = require('@fundkit/core');
-const { HoneyCoin } = require('@fundkit/honeycoin');
-const { EasyPay } = require('@fundkit/easypay');
+    module.exports = client;
+    ```
 
-// Initialize providers
-const honeycoin = new HoneyCoin({
-  apiKey: process.env.HONEYCOIN_API_KEY,
-  publicKey: process.env.HONEYCOIN_PUBLIC_KEY,
-});
+    </CodeGroup>
+  </Tab>
 
-const easypay = new EasyPay({
-  apiKey: process.env.EASYPAY_SECRET,
-  clientId: process.env.EASYPAY_CLIENT_ID,
-});
-
-// Create payment client
-const client = new PaymentClient({
-  apiKey: process.env.FUNDKIT_API_KEY,
-  providers: [honeycoin, easypay],
-  environment: 'sandbox',
-});
-
-module.exports = client;
-```
-
-</CodeGroup>
+  <Tab title="Python">
+    <Note>
+      Python SDK is coming soon! The Python version will have the same simple initialization pattern as the JavaScript SDK.
+    </Note>
+  </Tab>
+</Tabs>
 
 ## Step 4: Process Your First Payment
 
-<CodeGroup>
+<Tabs>
+  <Tab title="JavaScript/TypeScript">
+    <CodeGroup>
 
-```typescript TypeScript
-import client from './payment';
+    ```typescript TypeScript
+    import client from './payment';
 
-async function processPayment() {
-  try {
-    // Create a transaction
-    const transaction = {
-      amount: 5000, // Amount in smallest currency unit (e.g., cents)
-      currency: 'UGX',
-      operator: 'mtn', // mtn, airtel, etc.
-      accountNumber: '256779280949',
-      externalId: 'tx_' + Date.now(),
-      reason: 'Test payment from FundKit'
-    };
+    async function processPayment() {
+      try {
+        // Create a payment collection
+        const result = await client.collect({
+          amount: 10000, // Amount in smallest currency unit (10,000 = 100.00 UGX)
+          currency: 'UGX',
+          phoneNumber: '+256701234567',
+          reason: 'Test payment from FundKit'
+        });
+        
+        console.log('Payment initiated:', {
+          provider: result.provider,
+          transactionId: result.data.transactionId,
+          status: result.data.status
+        });
 
-    // Process the payment
-    console.log('Processing payment...');
-    const response = await client.collection(transaction);
-    
-    console.log('Payment initiated:', {
-      provider: response.provider,
-      transactionId: response.data.transactionId,
-      status: response.data.status
-    });
+        // Check payment status
+        const status = await client.checkTransactionStatus(
+          result.data.transactionId,
+          result.provider
+        );
+        
+        console.log('Payment status:', status.data.status);
+        
+      } catch (error) {
+        console.error('Payment failed:', error.message);
+      }
+    }
 
-    // Check payment status
-    const status = await client.getTransaction({
-      provider: response.provider,
-      txId: response.data.transactionId,
-    });
-    
-    console.log('Payment status:', status);
-    
-  } catch (error) {
-    console.error('Payment failed:', error);
-  }
-}
+    processPayment();
+    ```
 
-processPayment();
-```
+    ```javascript JavaScript
+    const client = require('./payment');
 
-```javascript JavaScript
-const client = require('./payment');
+    async function processPayment() {
+      try {
+        // Create a payment collection
+        const result = await client.collect({
+          amount: 10000, // Amount in smallest currency unit
+          currency: 'UGX',
+          phoneNumber: '+256701234567',
+          reason: 'Test payment from FundKit'
+        });
+        
+        console.log('Payment initiated:', {
+          provider: result.provider,
+          transactionId: result.data.transactionId,
+          status: result.data.status
+        });
 
-async function processPayment() {
-  try {
-    // Create a transaction
-    const transaction = {
-      amount: 5000,
-      currency: 'UGX',
-      operator: 'mtn',
-      accountNumber: '256779280949',
-      externalId: 'tx_' + Date.now(),
-      reason: 'Test payment from FundKit'
-    };
+        // Check payment status
+        const status = await client.checkTransactionStatus(
+          result.data.transactionId,
+          result.provider
+        );
+        
+        console.log('Payment status:', status.data.status);
+        
+      } catch (error) {
+        console.error('Payment failed:', error.message);
+      }
+    }
 
-    // Process the payment
-    console.log('Processing payment...');
-    const response = await client.collection(transaction);
-    
-    console.log('Payment initiated:', {
-      provider: response.provider,
-      transactionId: response.data.transactionId,
-      status: response.data.status
-    });
+    processPayment();
+    ```
 
-    // Check payment status
-    const status = await client.getTransaction({
-      provider: response.provider,
-      txId: response.data.transactionId,
-    });
-    
-    console.log('Payment status:', status);
-    
-  } catch (error) {
-    console.error('Payment failed:', error);
-  }
-}
+    </CodeGroup>
+  </Tab>
 
-processPayment();
-```
-
-</CodeGroup>
+  <Tab title="Python">
+    <Note>
+      Python SDK is coming soon! Payment processing will be just as simple with the Python version.
+    </Note>
+  </Tab>
+</Tabs>
 
 ## Step 5: Run Your Integration
 
-Set up your environment variables in a `.env` file:
+<Tabs>
+  <Tab title="JavaScript/TypeScript">
+    Set up your environment variables in a `.env` file:
 
-```bash .env
-FUNDKIT_API_KEY=fk_test_your_sandbox_key
-HONEYCOIN_API_KEY=your_honeycoin_key
-HONEYCOIN_PUBLIC_KEY=your_honeycoin_public_key
-EASYPAY_SECRET=your_easypay_secret
-EASYPAY_CLIENT_ID=your_easypay_client_id
-```
+    ```bash .env
+    HONEYCOIN_API_KEY=your_honeycoin_key
+    EASYPAY_API_KEY=your_easypay_key
+    ```
 
-Then run your code:
+    Then run your code:
 
-```bash
-node payment.js
-# or for TypeScript:
-npx tsx payment.ts
-```
+    ```bash
+    node payment.js
+    # or for TypeScript:
+    npx tsx payment.ts
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    <Note>
+      Python SDK is coming soon! Environment setup will follow Python best practices.
+    </Note>
+  </Tab>
+</Tabs>
 
 ## 🎉 Success!
 
 You should see output similar to:
 
-```
-Processing payment...
-Payment initiated: {
-  provider: 'honeycoin',
-  transactionId: 'txn_abc123xyz',
-  status: 'pending'
-}
-Payment status: {
-  status: 'completed',
-  amount: 5000,
-  currency: 'UGX'
-}
-```
+<Tabs>
+  <Tab title="JavaScript/TypeScript">
+    ```
+    Payment initiated: {
+      provider: 'honeycoin',
+      transactionId: 'txn_abc123xyz',
+      status: 'pending'
+    }
+    Payment status: completed
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    <Note>
+      Python SDK is coming soon! Output format will be similar to the JavaScript version.
+    </Note>
+  </Tab>
+</Tabs>
 
 ## Next Steps
 
