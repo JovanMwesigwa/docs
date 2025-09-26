@@ -1,6 +1,6 @@
 ---
-title: "PaymentClient"
-description: "The main entry point for processing payments with FundKit"
+title: 'PaymentClient'
+description: 'The main entry point for processing payments with FundKit'
 ---
 
 ## Overview
@@ -8,7 +8,8 @@ description: "The main entry point for processing payments with FundKit"
 The `PaymentClient` is the central orchestrator in FundKit. It manages multiple payment providers, handles smart provider selection, validates transactions, and provides a unified interface for all payment operations.
 
 <Info>
-  Think of PaymentClient as your payment conductor - it knows which providers are available, their capabilities, and automatically routes transactions to the best provider for each situation.
+  Think of PaymentClient as your payment conductor - it knows which providers are available, their
+  capabilities, and automatically routes transactions to the best provider for each situation.
 </Info>
 
 ## Basic Usage
@@ -28,9 +29,9 @@ const client = new PaymentClient({
     new EasyPay({
       apiKey: process.env.EASYPAY_SECRET!,
       clientId: process.env.EASYPAY_CLIENT_ID!,
-    })
+    }),
   ],
-  environment: 'sandbox'
+  environment: 'sandbox',
 });
 ```
 
@@ -71,25 +72,25 @@ const client = new PaymentClient({
   apiKey: process.env.FUNDKIT_API_KEY!,
   providers: [honeycoin, easypay],
   environment: 'production',
-  
+
   // Advanced options
-  timeout: 45000,           // 45 second timeout
-  retries: 5,               // Retry failed requests 5 times
-  retryDelay: 1000,         // Wait 1 second between retries
-  
+  timeout: 45000, // 45 second timeout
+  retries: 5, // Retry failed requests 5 times
+  retryDelay: 1000, // Wait 1 second between retries
+
   // Provider selection strategy
-  strategy: 'round-robin',  // 'smart', 'round-robin', 'priority'
-  
+  strategy: 'round-robin', // 'smart', 'round-robin', 'priority'
+
   // Event handlers
-  onSuccess: (transaction) => console.log('Payment succeeded:', transaction.id),
-  onFailure: (error) => console.error('Payment failed:', error),
-  
+  onSuccess: transaction => console.log('Payment succeeded:', transaction.id),
+  onFailure: error => console.error('Payment failed:', error),
+
   // Custom logger
   logger: {
-    info: (msg) => logger.info(msg),
-    error: (msg) => logger.error(msg),
-    debug: (msg) => logger.debug(msg)
-  }
+    info: msg => logger.info(msg),
+    error: msg => logger.error(msg),
+    debug: msg => logger.debug(msg),
+  },
 });
 ```
 
@@ -101,12 +102,12 @@ Process a payment collection (charge customer):
 
 ```typescript
 const transaction = {
-  amount: 10000,              // Amount in smallest unit (e.g., cents)
+  amount: 10000, // Amount in smallest unit (e.g., cents)
   currency: 'UGX',
   operator: 'mtn',
   accountNumber: '256779280949',
   externalId: 'order_12345',
-  reason: 'Order payment'
+  reason: 'Order payment',
 };
 
 try {
@@ -118,6 +119,7 @@ try {
 ```
 
 **Response:**
+
 ```typescript
 {
   provider: 'honeycoin',
@@ -139,13 +141,14 @@ Check the status of a transaction:
 ```typescript
 const status = await client.getTransaction({
   provider: 'honeycoin',
-  txId: 'txn_abc123'
+  txId: 'txn_abc123',
 });
 
 console.log('Transaction status:', status);
 ```
 
 **Response:**
+
 ```typescript
 {
   id: 'txn_abc123',
@@ -170,7 +173,7 @@ const payout = await client.payout({
   operator: 'airtel',
   accountNumber: '256701234567',
   externalId: 'payout_789',
-  reason: 'Seller payment'
+  reason: 'Seller payment',
 });
 ```
 
@@ -225,7 +228,7 @@ You can also manually specify which provider to use:
 
 ```typescript
 const result = await client.collection(transaction, {
-  preferredProvider: 'easypay'
+  preferredProvider: 'easypay',
 });
 ```
 
@@ -239,11 +242,11 @@ import { PaymentClient } from '@fundkit/core';
 const client = new PaymentClient(config);
 
 // Listen for events
-client.on('transaction:started', (transaction) => {
+client.on('transaction:started', transaction => {
   console.log('Transaction started:', transaction.externalId);
 });
 
-client.on('transaction:completed', (transaction) => {
+client.on('transaction:completed', transaction => {
   console.log('Transaction completed:', transaction.id);
 });
 
@@ -270,7 +273,7 @@ Perfect for development and testing:
 const client = new PaymentClient({
   apiKey: 'fk_test_sandbox_key',
   providers: [honeycoin, easypay],
-  environment: 'sandbox'
+  environment: 'sandbox',
 });
 
 // All transactions will be simulated
@@ -279,6 +282,7 @@ const client = new PaymentClient({
 ```
 
 **Sandbox Benefits:**
+
 - ✅ No provider approval needed
 - ✅ Instant testing
 - ✅ Predictable responses
@@ -293,7 +297,7 @@ For live transactions:
 const client = new PaymentClient({
   apiKey: 'fk_live_production_key',
   providers: [honeycoin, easypay],
-  environment: 'production'
+  environment: 'production',
 });
 
 // Real transactions with actual money
@@ -301,6 +305,7 @@ const client = new PaymentClient({
 ```
 
 **Production Requirements:**
+
 - ⚠️ Provider compliance approval
 - ⚠️ Live API credentials
 - ⚠️ Webhook endpoints configured
@@ -322,9 +327,9 @@ try {
       code: error.code,
       message: error.message,
       provider: error.context?.provider,
-      details: error.details
+      details: error.details,
     });
-    
+
     // Handle specific error types
     switch (error.code) {
       case 'INSUFFICIENT_FUNDS':

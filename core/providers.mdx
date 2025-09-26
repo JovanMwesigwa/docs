@@ -1,6 +1,6 @@
 ---
-title: "Payment Providers"
-description: "Understanding payment providers and how FundKit manages them"
+title: 'Payment Providers'
+description: 'Understanding payment providers and how FundKit manages them'
 ---
 
 ## Overview
@@ -8,7 +8,8 @@ description: "Understanding payment providers and how FundKit manages them"
 Payment providers are the backbone of FundKit. Each provider represents a different payment service (like HoneyCoin, EasyPay, or Tola) with its own API, authentication, and capabilities. FundKit abstracts these differences behind a unified interface.
 
 <Info>
-  Think of providers as different payment "channels" - each with their own strengths, coverage areas, and supported features. FundKit lets you use them all through one consistent API.
+  Think of providers as different payment "channels" - each with their own strengths, coverage
+  areas, and supported features. FundKit lets you use them all through one consistent API.
 </Info>
 
 ## Provider Architecture
@@ -24,7 +25,7 @@ abstract class BaseProvider {
   abstract collection(transaction: Transaction): Promise<CollectionResponse>;
   abstract getTransaction(txId: string): Promise<TransactionStatus>;
   abstract validateTransaction(transaction: Transaction): Promise<boolean>;
-  
+
   // Common functionality
   getName(): string;
   getCapabilities(): ProviderCapabilities;
@@ -80,11 +81,12 @@ import { HoneyCoin } from '@fundkit/honeycoin';
 const honeycoin = new HoneyCoin({
   apiKey: process.env.HONEYCOIN_API_KEY!,
   publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-  environment: 'sandbox' // or 'production'
+  environment: 'sandbox', // or 'production'
 });
 ```
 
 **Capabilities:**
+
 - ✅ Collections (charge customers)
 - ✅ Payouts (send money)
 - ✅ Status checking
@@ -93,6 +95,7 @@ const honeycoin = new HoneyCoin({
 - ✅ Multiple operators (MTN, Airtel, Safaricom)
 
 **Limits:**
+
 - Minimum: 500 UGX / 50 KES / 1000 TZS
 - Maximum: 10,000,000 UGX / 1,000,000 KES / 20,000,000 TZS
 
@@ -107,11 +110,12 @@ import { EasyPay } from '@fundkit/easypay';
 const easypay = new EasyPay({
   apiKey: process.env.EASYPAY_SECRET!,
   clientId: process.env.EASYPAY_CLIENT_ID!,
-  environment: 'sandbox'
+  environment: 'sandbox',
 });
 ```
 
 **Capabilities:**
+
 - ✅ Collections
 - ✅ Real-time webhooks
 - ✅ Fast processing (< 30 seconds)
@@ -119,6 +123,7 @@ const easypay = new EasyPay({
 - ⏳ Payouts (coming soon)
 
 **Limits:**
+
 - Minimum: 1,000 UGX
 - Maximum: 5,000,000 UGX
 
@@ -133,11 +138,12 @@ import { Tola } from '@fundkit/tola';
 const tola = new Tola({
   apiKey: process.env.TOLA_API_KEY!,
   merchantId: process.env.TOLA_MERCHANT_ID!,
-  environment: 'sandbox'
+  environment: 'sandbox',
 });
 ```
 
 **Capabilities:**
+
 - ✅ Collections
 - ✅ Payouts
 - ✅ Bank transfers
@@ -146,6 +152,7 @@ const tola = new Tola({
 - ✅ Multiple payment methods
 
 **Limits:**
+
 - Minimum: 500 UGX
 - Maximum: 20,000,000 UGX
 
@@ -200,34 +207,34 @@ const honeycoin = new HoneyCoin({
   apiKey: process.env.HONEYCOIN_API_KEY!,
   publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
   environment: 'production',
-  
+
   // Advanced options
   timeout: 45000,
   retries: 5,
   retryDelay: 2000,
-  
+
   // Rate limiting
   rateLimit: {
     requests: 100,
-    window: 60000 // Per minute
+    window: 60000, // Per minute
   },
-  
+
   // Custom headers
   headers: {
     'User-Agent': 'MyApp/1.0',
-    'X-Custom-Header': 'value'
+    'X-Custom-Header': 'value',
   },
-  
+
   // Webhook configuration
   webhook: {
     url: 'https://api.myapp.com/webhooks/honeycoin',
     secret: 'webhook_secret_key',
-    events: ['transaction.completed', 'transaction.failed']
+    events: ['transaction.completed', 'transaction.failed'],
   },
-  
+
   // Logging
   logger: customLogger,
-  logLevel: 'debug'
+  logLevel: 'debug',
 });
 ```
 
@@ -240,7 +247,7 @@ FundKit automatically selects the best provider based on multiple factors:
 ```typescript
 const client = new PaymentClient({
   providers: [honeycoin, easypay, tola],
-  strategy: 'smart' // Default
+  strategy: 'smart', // Default
 });
 
 // FundKit will automatically choose the best provider
@@ -248,6 +255,7 @@ const result = await client.collection(transaction);
 ```
 
 **Selection Criteria:**
+
 1. **Currency Support** - Does the provider support this currency?
 2. **Amount Limits** - Can the provider handle this transaction amount?
 3. **Operator Support** - Does the provider support this mobile operator?
@@ -263,11 +271,11 @@ Distribute transactions evenly across providers:
 ```typescript
 const client = new PaymentClient({
   providers: [honeycoin, easypay, tola],
-  strategy: 'round-robin'
+  strategy: 'round-robin',
 });
 
 // First transaction -> HoneyCoin
-// Second transaction -> EasyPay  
+// Second transaction -> EasyPay
 // Third transaction -> Tola
 // Fourth transaction -> HoneyCoin (cycles back)
 ```
@@ -279,11 +287,11 @@ Use providers in order of preference:
 ```typescript
 const client = new PaymentClient({
   providers: [
-    { provider: honeycoin, priority: 1 },    // Try first
-    { provider: easypay, priority: 2 },     // Try second
-    { provider: tola, priority: 3 }         // Try last
+    { provider: honeycoin, priority: 1 }, // Try first
+    { provider: easypay, priority: 2 }, // Try second
+    { provider: tola, priority: 3 }, // Try last
   ],
-  strategy: 'priority'
+  strategy: 'priority',
 });
 ```
 
@@ -294,12 +302,12 @@ Override automatic selection for specific transactions:
 ```typescript
 // Force use of specific provider
 const result = await client.collection(transaction, {
-  preferredProvider: 'easypay'
+  preferredProvider: 'easypay',
 });
 
 // Exclude certain providers
 const result = await client.collection(transaction, {
-  excludeProviders: ['tola']
+  excludeProviders: ['tola'],
 });
 ```
 
@@ -377,9 +385,9 @@ const client = new PaymentClient({
   fallbackStrategy: {
     enabled: true,
     healthThreshold: 'degraded', // Fall back if provider is degraded or worse
-    maxFallbacks: 2,            // Try up to 2 alternative providers
-    fallbackDelay: 1000         // Wait 1 second between attempts
-  }
+    maxFallbacks: 2, // Try up to 2 alternative providers
+    fallbackDelay: 1000, // Wait 1 second between attempts
+  },
 });
 ```
 
@@ -420,7 +428,7 @@ Monitor provider activities:
 
 ```typescript
 // Listen for provider events
-honeycoin.on('request:started', (request) => {
+honeycoin.on('request:started', request => {
   console.log('API request started:', request.url);
 });
 

@@ -1,6 +1,6 @@
 ---
-title: "Transactions"
-description: "Understanding transaction lifecycle, states, and management in FundKit"
+title: 'Transactions'
+description: 'Understanding transaction lifecycle, states, and management in FundKit'
 ---
 
 ## Overview
@@ -8,7 +8,8 @@ description: "Understanding transaction lifecycle, states, and management in Fun
 Transactions are the core data structure in FundKit, representing a payment request or money transfer. Understanding the transaction lifecycle is crucial for building robust payment integrations.
 
 <Info>
-  A transaction in FundKit represents a single payment operation - whether that's collecting money from a customer, sending money to a recipient, or checking the status of a previous payment.
+  A transaction in FundKit represents a single payment operation - whether that's collecting money
+  from a customer, sending money to a recipient, or checking the status of a previous payment.
 </Info>
 
 ## Transaction Structure
@@ -17,12 +18,12 @@ Transactions are the core data structure in FundKit, representing a payment requ
 
 ```typescript
 interface Transaction {
-  amount: number;                    // Amount in smallest currency unit
-  currency: string;                  // ISO currency code (UGX, KES, etc.)
-  operator: string;                  // Mobile network operator
-  accountNumber: string;             // Phone number or account identifier
-  externalId: string;                // Your unique transaction ID
-  reason?: string;                   // Description of the transaction
+  amount: number; // Amount in smallest currency unit
+  currency: string; // ISO currency code (UGX, KES, etc.)
+  operator: string; // Mobile network operator
+  accountNumber: string; // Phone number or account identifier
+  externalId: string; // Your unique transaction ID
+  reason?: string; // Description of the transaction
 }
 ```
 
@@ -30,12 +31,12 @@ interface Transaction {
 
 ```typescript
 const transaction = {
-  amount: 10000,                     // 100.00 UGX (cents)
-  currency: 'UGX',                   // Ugandan Shillings
-  operator: 'mtn',                   // MTN Uganda
-  accountNumber: '256779280949',     // Customer's phone number
-  externalId: 'order_12345',         // Your order/invoice ID
-  reason: 'Payment for order #12345' // Human-readable description
+  amount: 10000, // 100.00 UGX (cents)
+  currency: 'UGX', // Ugandan Shillings
+  operator: 'mtn', // MTN Uganda
+  accountNumber: '256779280949', // Customer's phone number
+  externalId: 'order_12345', // Your order/invoice ID
+  reason: 'Payment for order #12345', // Human-readable description
 };
 ```
 
@@ -48,12 +49,12 @@ Collect money from customers (charge them):
 ```typescript
 // Customer paying for an order
 const collectionTx = {
-  amount: 25000,                     // 250.00 UGX
+  amount: 25000, // 250.00 UGX
   currency: 'UGX',
   operator: 'airtel',
   accountNumber: '256701234567',
   externalId: 'invoice_789',
-  reason: 'Invoice payment'
+  reason: 'Invoice payment',
 };
 
 const result = await client.collection(collectionTx);
@@ -66,12 +67,12 @@ Send money to recipients:
 ```typescript
 // Paying a seller or refunding a customer
 const payoutTx = {
-  amount: 15000,                     // 150.00 UGX
+  amount: 15000, // 150.00 UGX
   currency: 'UGX',
   operator: 'mtn',
   accountNumber: '256778123456',
   externalId: 'payout_456',
-  reason: 'Seller commission payment'
+  reason: 'Seller commission payment',
 };
 
 const result = await client.payout(payoutTx);
@@ -81,43 +82,24 @@ const result = await client.payout(payoutTx);
 
 <Steps>
   <Step title="Created">
-    Transaction is created and validated by FundKit
-    
-    ```typescript
-    const transaction = { /* transaction data */ };
-    // Status: Not yet submitted
-    ```
+    Transaction is created and validated by FundKit ```typescript const transaction ={' '}
+    {/* transaction data */}; // Status: Not yet submitted ```
   </Step>
-  
+
   <Step title="Submitted">
-    Transaction is sent to the selected payment provider
-    
-    ```typescript
-    const result = await client.collection(transaction);
-    // Status: 'pending'
-    // Provider: Selected provider name
-    // TransactionId: Provider's transaction ID
-    ```
+    Transaction is sent to the selected payment provider ```typescript const result = await
+    client.collection(transaction); // Status: 'pending' // Provider: Selected provider name //
+    TransactionId: Provider's transaction ID ```
   </Step>
-  
+
   <Step title="Processing">
-    Provider processes the transaction with the mobile network
-    
-    ```typescript
-    // Status: 'processing'
-    // Customer receives SMS prompt to confirm payment
-    ```
+    Provider processes the transaction with the mobile network ```typescript // Status: 'processing'
+    // Customer receives SMS prompt to confirm payment ```
   </Step>
-  
+
   <Step title="Completed or Failed">
-    Final status is determined
-    
-    ```typescript
-    // Success: Status: 'completed'
-    // Failure: Status: 'failed'
-    // Timeout: Status: 'timeout'
-    // Cancelled: Status: 'cancelled'
-    ```
+    Final status is determined ```typescript // Success: Status: 'completed' // Failure: Status:
+    'failed' // Timeout: Status: 'timeout' // Cancelled: Status: 'cancelled' ```
   </Step>
 </Steps>
 
@@ -140,6 +122,7 @@ Transaction has been submitted but not yet processed:
 ```
 
 **What it means:**
+
 - Provider has accepted the transaction
 - Waiting for mobile network to process
 - Customer may receive SMS prompt
@@ -162,6 +145,7 @@ Transaction is actively being processed:
 ```
 
 **What it means:**
+
 - Mobile network is processing payment
 - Customer is likely seeing payment prompt
 - Should complete within 1-3 minutes
@@ -186,6 +170,7 @@ Transaction was successful:
 ```
 
 **What it means:**
+
 - Payment was successful
 - Money has been transferred
 - You can fulfill the order/service
@@ -214,6 +199,7 @@ Transaction was unsuccessful:
 ```
 
 **Common failure reasons:**
+
 - `INSUFFICIENT_FUNDS` - Customer doesn't have enough money
 - `INVALID_PHONE_NUMBER` - Phone number is incorrect
 - `CUSTOMER_CANCELLED` - Customer declined the payment
@@ -241,6 +227,7 @@ Transaction took too long to complete:
 ```
 
 **What it means:**
+
 - Transaction exceeded maximum processing time
 - Customer may not have seen or responded to SMS
 - Transaction can usually be retried
@@ -269,7 +256,7 @@ Transaction was cancelled before completion:
 ```typescript
 const status = await client.getTransaction({
   provider: 'honeycoin',
-  txId: 'txn_abc123'
+  txId: 'txn_abc123',
 });
 
 console.log(`Transaction ${status.externalId} is ${status.status}`);
@@ -279,25 +266,25 @@ console.log(`Transaction ${status.externalId} is ${status.status}`);
 
 ```typescript
 async function waitForCompletion(provider: string, txId: string) {
-  const maxAttempts = 20;           // Maximum polling attempts
-  const pollInterval = 5000;        // 5 seconds between checks
-  
+  const maxAttempts = 20; // Maximum polling attempts
+  const pollInterval = 5000; // 5 seconds between checks
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const status = await client.getTransaction({ provider, txId });
-    
+
     console.log(`Attempt ${attempt}: Status is ${status.status}`);
-    
+
     // Check if transaction is in final state
     if (['completed', 'failed', 'timeout', 'cancelled'].includes(status.status)) {
       return status;
     }
-    
+
     // Wait before next check
     if (attempt < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, pollInterval));
     }
   }
-  
+
   throw new Error('Transaction status check timed out');
 }
 
@@ -319,22 +306,22 @@ Instead of polling, use webhooks for real-time updates:
 const honeycoin = new HoneyCoin({
   apiKey: process.env.HONEYCOIN_API_KEY!,
   publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-  webhookUrl: 'https://api.myapp.com/webhooks/honeycoin'
+  webhookUrl: 'https://api.myapp.com/webhooks/honeycoin',
 });
 
 // Handle webhook in your API
 app.post('/webhooks/honeycoin', (req, res) => {
   const event = req.body;
-  
+
   if (event.type === 'transaction.completed') {
     const transaction = event.data;
     console.log(`Transaction ${transaction.externalId} completed!`);
-    
+
     // Update your database
     // Send confirmation to customer
     // Fulfill the order
   }
-  
+
   res.status(200).json({ received: true });
 });
 ```
@@ -348,21 +335,21 @@ FundKit validates all transaction data before processing:
 ```typescript
 // Valid transaction
 const validTx = {
-  amount: 5000,                      // ✅ Positive number
-  currency: 'UGX',                   // ✅ Supported currency
-  operator: 'mtn',                   // ✅ Valid operator
-  accountNumber: '256779280949',     // ✅ Valid phone format
-  externalId: 'order_123',           // ✅ Unique identifier
-  reason: 'Test payment'             // ✅ Optional description
+  amount: 5000, // ✅ Positive number
+  currency: 'UGX', // ✅ Supported currency
+  operator: 'mtn', // ✅ Valid operator
+  accountNumber: '256779280949', // ✅ Valid phone format
+  externalId: 'order_123', // ✅ Unique identifier
+  reason: 'Test payment', // ✅ Optional description
 };
 
 // Invalid transaction examples
 const invalidTx = {
-  amount: -1000,                     // ❌ Negative amount
-  currency: 'USD',                   // ❌ Unsupported currency
-  operator: 'vodafone',              // ❌ Unsupported operator
-  accountNumber: '123',              // ❌ Invalid phone number
-  externalId: '',                    // ❌ Empty external ID
+  amount: -1000, // ❌ Negative amount
+  currency: 'USD', // ❌ Unsupported currency
+  operator: 'vodafone', // ❌ Unsupported operator
+  accountNumber: '123', // ❌ Invalid phone number
+  externalId: '', // ❌ Empty external ID
 };
 ```
 
@@ -376,17 +363,17 @@ function validateTransaction(tx: Transaction): void {
   if (tx.amount < 1000) {
     throw new Error('Minimum transaction amount is 1,000 UGX');
   }
-  
+
   if (tx.amount > 5000000) {
     throw new Error('Maximum transaction amount is 5,000,000 UGX');
   }
-  
+
   // Validate phone number format
   const phoneRegex = /^256[0-9]{9}$/;
   if (!phoneRegex.test(tx.accountNumber)) {
     throw new Error('Phone number must be in format 256XXXXXXXXX');
   }
-  
+
   // Check external ID format
   if (!tx.externalId.startsWith('order_')) {
     throw new Error('External ID must start with "order_"');
@@ -416,7 +403,7 @@ const transaction = {
   accountNumber: '256779280949',
   externalId: 'order_12345',
   reason: 'Product purchase',
-  
+
   // Additional metadata
   metadata: {
     customerId: 'cust_789',
@@ -426,9 +413,9 @@ const transaction = {
     ipAddress: '192.168.1.1',
     orderItems: [
       { id: 'item_1', quantity: 2, price: 3000 },
-      { id: 'item_2', quantity: 1, price: 4000 }
-    ]
-  }
+      { id: 'item_2', quantity: 1, price: 4000 },
+    ],
+  },
 };
 ```
 
@@ -499,7 +486,7 @@ const transactions = await client.getTransactions({
   startDate: '2024-01-01',
   endDate: '2024-01-31',
   status: 'completed',
-  limit: 100
+  limit: 100,
 });
 
 // Calculate totals
@@ -523,7 +510,8 @@ const byProvider = transactions.reduce((acc, tx) => {
 }, {});
 
 // Success rates
-const successRate = transactions.filter(tx => tx.status === 'completed').length / transactions.length;
+const successRate =
+  transactions.filter(tx => tx.status === 'completed').length / transactions.length;
 
 // Average transaction amount
 const avgAmount = total / transactions.length;
@@ -531,7 +519,7 @@ const avgAmount = total / transactions.length;
 console.log('Analytics:', {
   successRate: `${(successRate * 100).toFixed(2)}%`,
   avgAmount: `${avgAmount.toFixed(0)} UGX`,
-  byProvider
+  byProvider,
 });
 ```
 
@@ -549,31 +537,31 @@ try {
     // Show user-friendly validation message
     return;
   }
-  
+
   // Handle provider errors
   if (error.code === 'PROVIDER_ERROR') {
     console.error('Provider issue:', error.message);
     // Try different provider or retry later
     return;
   }
-  
+
   // Handle specific transaction errors
   switch (error.code) {
     case 'INSUFFICIENT_FUNDS':
       // Customer doesn't have enough money
       showMessage('Insufficient funds. Please top up and try again.');
       break;
-      
+
     case 'INVALID_PHONE_NUMBER':
       // Phone number is wrong
       showMessage('Invalid phone number. Please check and try again.');
       break;
-      
+
     case 'CUSTOMER_CANCELLED':
       // Customer declined payment
       showMessage('Payment was cancelled.');
       break;
-      
+
     default:
       // Unknown error
       showMessage('Payment failed. Please try again.');

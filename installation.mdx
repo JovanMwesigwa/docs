@@ -1,6 +1,6 @@
 ---
-title: "Installation"
-description: "Install FundKit packages and set up your development environment"
+title: 'Installation'
+description: 'Install FundKit packages and set up your development environment'
 ---
 
 ## Package Installation
@@ -37,32 +37,17 @@ Install the specific payment providers you want to support:
 
 <Tabs>
   <Tab title="HoneyCoin">
-    ```bash
-    npm install @fundkit/honeycoin
-    ```
-    
-    **Supports:** Mobile money in Uganda, Kenya, Tanzania
-    
+    ```bash npm install @fundkit/honeycoin ``` **Supports:** Mobile money in Uganda, Kenya, Tanzania
     **Features:** Collections, payouts, status checking
   </Tab>
-  
+
   <Tab title="EasyPay">
-    ```bash
-    npm install @fundkit/easypay
-    ```
-    
-    **Supports:** MTN, Airtel mobile money in Uganda
-    
+    ```bash npm install @fundkit/easypay ``` **Supports:** MTN, Airtel mobile money in Uganda
     **Features:** Collections, real-time webhooks
   </Tab>
-  
+
   <Tab title="Tola">
-    ```bash
-    npm install @fundkit/tola
-    ```
-    
-    **Supports:** Mobile money and bank transfers in Uganda
-    
+    ```bash npm install @fundkit/tola ``` **Supports:** Mobile money and bank transfers in Uganda
     **Features:** Collections, payouts, reconciliation
   </Tab>
 </Tabs>
@@ -76,7 +61,8 @@ npm install @fundkit/types
 ```
 
 <Note>
-  The types package is automatically included when you install core or provider packages, but you can install it separately if you only need the type definitions.
+  The types package is automatically included when you install core or provider packages, but you
+  can install it separately if you only need the type definitions.
 </Note>
 
 ## Environment Setup
@@ -85,27 +71,18 @@ npm install @fundkit/types
 
 <AccordionGroup>
   <Accordion icon="nodejs" title="Supported Node.js Versions">
-    FundKit supports the following Node.js versions:
-    
-    - **Node.js 16.x** ✅ (Minimum supported)
-    - **Node.js 18.x** ✅ (Recommended)
-    - **Node.js 20.x** ✅ (Latest LTS)
-    - **Node.js 22.x** ✅ (Current)
-    
+    FundKit supports the following Node.js versions: - **Node.js 16.x** ✅ (Minimum supported) -
+    **Node.js 18.x** ✅ (Recommended) - **Node.js 20.x** ✅ (Latest LTS) - **Node.js 22.x** ✅
+    (Current)
     <Warning>
       Node.js versions below 16.x are not supported due to missing ESM and crypto features.
     </Warning>
   </Accordion>
-  
+
   <Accordion icon="gear" title="Runtime Compatibility">
-    FundKit works in multiple JavaScript runtimes:
-    
-    - **Node.js** - Full support
-    - **Bun** - Full support
-    - **Deno** - Supported with import maps
-    - **Cloudflare Workers** - Supported
-    - **Vercel Edge Functions** - Supported
-    - **Browser** - Core functionality only (no Node.js APIs)
+    FundKit works in multiple JavaScript runtimes: - **Node.js** - Full support - **Bun** - Full
+    support - **Deno** - Supported with import maps - **Cloudflare Workers** - Supported - **Vercel
+    Edge Functions** - Supported - **Browser** - Core functionality only (no Node.js APIs)
   </Accordion>
 </AccordionGroup>
 
@@ -122,7 +99,7 @@ FUNDKIT_ENVIRONMENT=sandbox
 HONEYCOIN_API_KEY=your_honeycoin_api_key
 HONEYCOIN_PUBLIC_KEY=your_honeycoin_public_key
 
-# EasyPay (if using)  
+# EasyPay (if using)
 EASYPAY_SECRET=your_easypay_secret
 EASYPAY_CLIENT_ID=your_easypay_client_id
 
@@ -132,7 +109,8 @@ TOLA_MERCHANT_ID=your_tola_merchant_id
 ```
 
 <Tip>
-  Use `fk_test_` prefixed keys for sandbox testing. These work immediately without provider approval.
+  Use `fk_test_` prefixed keys for sandbox testing. These work immediately without provider
+  approval.
 </Tip>
 
 ## Framework Integration
@@ -153,9 +131,9 @@ const paymentClient = new PaymentClient({
     new HoneyCoin({
       apiKey: process.env.HONEYCOIN_API_KEY!,
       publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-    })
+    }),
   ],
-  environment: 'sandbox'
+  environment: 'sandbox',
 });
 
 app.post('/payments', async (req, res) => {
@@ -183,9 +161,9 @@ const paymentClient = new PaymentClient({
     new HoneyCoin({
       apiKey: process.env.HONEYCOIN_API_KEY!,
       publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-    })
+    }),
   ],
-  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
 });
 
 export async function POST(request: NextRequest) {
@@ -194,10 +172,7 @@ export async function POST(request: NextRequest) {
     const result = await paymentClient.collection(transaction);
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message }, 
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 ```
@@ -213,15 +188,12 @@ const paymentClient = new PaymentClient({
     new HoneyCoin({
       apiKey: process.env.HONEYCOIN_API_KEY!,
       publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-    })
+    }),
   ],
-  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
 });
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -252,9 +224,9 @@ const paymentClient = new PaymentClient({
     new EasyPay({
       apiKey: process.env.EASYPAY_SECRET!,
       clientId: process.env.EASYPAY_CLIENT_ID!,
-    })
+    }),
   ],
-  environment: 'sandbox'
+  environment: 'sandbox',
 });
 
 fastify.post('/payments', async (request, reply) => {
@@ -305,7 +277,7 @@ try {
   const client = new PaymentClient({
     apiKey: 'test_key',
     providers: [],
-    environment: 'sandbox'
+    environment: 'sandbox',
   });
   console.log('✅ PaymentClient instantiated successfully');
 } catch (error) {
@@ -324,7 +296,7 @@ try {
   const client = new PaymentClient({
     apiKey: 'test_key',
     providers: [],
-    environment: 'sandbox'
+    environment: 'sandbox',
   });
   console.log('✅ PaymentClient instantiated successfully');
 } catch (error) {
@@ -348,30 +320,21 @@ node test.js
 
 <AccordionGroup>
   <Accordion icon="exclamation-triangle" title="Module not found errors">
-    If you see module resolution errors:
-    
-    1. Ensure you're using Node.js 16+ 
-    2. Check that all packages are installed: `npm ls @fundkit/core`
-    3. Clear your node_modules and reinstall: `rm -rf node_modules package-lock.json && npm install`
-    4. Verify your package.json includes the packages
+    If you see module resolution errors: 1. Ensure you're using Node.js 16+ 2. Check that all
+    packages are installed: `npm ls @fundkit/core` 3. Clear your node_modules and reinstall: `rm -rf
+    node_modules package-lock.json && npm install` 4. Verify your package.json includes the packages
   </Accordion>
-  
+
   <Accordion icon="gear" title="TypeScript compilation issues">
-    For TypeScript issues:
-    
-    1. Update to TypeScript 4.5+: `npm install -D typescript@latest`
-    2. Enable `esModuleInterop` and `allowSyntheticDefaultImports` in tsconfig.json
-    3. Use `import type` for type-only imports from `@fundkit/types`
+    For TypeScript issues: 1. Update to TypeScript 4.5+: `npm install -D typescript@latest` 2.
+    Enable `esModuleInterop` and `allowSyntheticDefaultImports` in tsconfig.json 3. Use `import
+    type` for type-only imports from `@fundkit/types`
   </Accordion>
-  
+
   <Accordion icon="cloud" title="Runtime environment issues">
-    For specific runtime environments:
-    
-    **Cloudflare Workers:** Use `import` syntax, not `require()`
-    
-    **Vercel Edge:** Ensure you're not using Node.js-specific APIs
-    
-    **Browser:** Some provider packages use Node.js APIs and won't work in browsers
+    For specific runtime environments: **Cloudflare Workers:** Use `import` syntax, not `require()`
+    **Vercel Edge:** Ensure you're not using Node.js-specific APIs **Browser:** Some provider
+    packages use Node.js APIs and won't work in browsers
   </Accordion>
 </AccordionGroup>
 
