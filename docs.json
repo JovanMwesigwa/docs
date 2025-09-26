@@ -28,7 +28,12 @@
           },
           {
             "group": "Providers",
-            "pages": ["providers/honeycoin", "providers/easypay", "providers/tola"]
+            "pages": [
+              "providers/honeycoin",
+              "providers/easypay",
+              "providers/tola",
+              "providers/tingg"
+            ]
           },
           {
             "group": "Advanced",
@@ -52,7 +57,8 @@
             "pages": [
               "api-reference/providers/honeycoin",
               "api-reference/providers/easypay",
-              "api-reference/providers/tola"
+              "api-reference/providers/tola",
+              "api-reference/providers/tingg"
             ]
           }
         ]

@@ -1,0 +1,684 @@
+---
+title: 'Tingg Provider'
+description: 'Complete guide to using Tingg payment provider with FundKit'
+---
+
+## Overview
+
+Tingg is Africa's leading mobile money payment platform, providing comprehensive payment solutions across multiple African countries. With FundKit's Tingg integration, you can process payments through Safaricom, MTN, Airtel, and other major mobile networks across Kenya, Uganda, Tanzania, Rwanda, Malawi, Zambia, and Zimbabwe.
+
+<Info>
+  Tingg specializes in cross-border payments and multi-operator support, making it ideal for
+  businesses operating across multiple African countries with a single integration.
+</Info>
+
+## Coverage & Capabilities
+
+### Supported Countries
+
+<CardGroup cols={3}>
+  <Card title="Kenya" icon="flag">
+    **Networks:** Safaricom, MTN, Airtel **Currency:** KES **Features:** Collections, Status Check
+  </Card>
+
+  <Card title="Uganda" icon="flag">
+    **Networks:** MTN, Airtel **Currency:** UGX **Features:** Collections, Status Check
+  </Card>
+
+  <Card title="Tanzania" icon="flag">
+    **Networks:** Vodacom, Airtel, Tigo **Currency:** TZS **Features:** Collections, Status Check
+  </Card>
+
+  <Card title="Rwanda" icon="flag">
+    **Networks:** MTN, Airtel **Currency:** RWF **Features:** Collections, Status Check
+  </Card>
+
+  <Card title="Malawi" icon="flag">
+    **Networks:** Airtel, TNM **Currency:** MWK **Features:** Collections, Status Check
+  </Card>
+
+  <Card title="Zambia" icon="flag">
+    **Networks:** MTN, Airtel **Currency:** ZMW **Features:** Collections, Status Check
+  </Card>
+
+  <Card title="Zimbabwe" icon="flag">
+    **Networks:** Econet, NetOne **Currency:** ZWL **Features:** Collections, Status Check
+  </Card>
+</CardGroup>
+
+### Capabilities
+
+- ✅ **Collections** - Charge customers via mobile money
+- ✅ **Status Checking** - Real-time transaction status
+- ✅ **Multi-country** - 7 African countries supported
+- ✅ **Multi-operator** - All major mobile networks
+- ✅ **Cross-border** - Process payments across countries
+- ✅ **OAuth Authentication** - Secure token-based auth
+- ✅ **High Reliability** - 98% uptime guarantee
+- ⏳ **Payouts** - Coming soon
+- ⏳ **Webhooks** - Coming soon
+
+## Installation
+
+```bash
+npm install @fundkit/tingg
+```
+
+## Configuration
+
+### Basic Setup
+
+```typescript
+import { Tingg } from '@fundkit/tingg';
+
+const tingg = new Tingg({
+  apiKey: process.env.TINGG_API_KEY!,
+  publicKey: process.env.TINGG_PUBLIC_KEY!,
+  serviceCode: process.env.TINGG_SERVICE_CODE!,
+  paymentOptionCode: process.env.TINGG_PAYMENT_OPTION_CODE!,
+});
+```
+
+### Configuration Options
+
+<ParamField path="apiKey" type="string" required>
+  Your Tingg API key. This is your client secret for OAuth authentication.
+</ParamField>
+
+<ParamField path="publicKey" type="string" required>
+  Your Tingg public key. This is your client ID for OAuth authentication.
+</ParamField>
+
+<ParamField path="serviceCode" type="string" required>
+  The service code assigned to your merchant account on the Tingg portal. This identifies your
+  business on Tingg's platform.
+</ParamField>
+
+<ParamField path="paymentOptionCode" type="string" required>
+  The payer client code for the mobile money operator you want to charge. Common codes: SAFKE
+  (Safaricom Kenya), MTNKE (MTN Kenya), AIRKE (Airtel Kenya), etc.
+</ParamField>
+
+<ParamField path="timeout" type="number" default="30000">
+  Request timeout in milliseconds.
+</ParamField>
+
+<ParamField path="retries" type="number" default="3">
+  Number of retry attempts for failed requests.
+</ParamField>
+
+### Advanced Configuration
+
+```typescript
+const tingg = new Tingg({
+  apiKey: process.env.TINGG_API_KEY!,
+  publicKey: process.env.TINGG_PUBLIC_KEY!,
+  serviceCode: process.env.TINGG_SERVICE_CODE!,
+  paymentOptionCode: process.env.TINGG_PAYMENT_OPTION_CODE!,
+
+  // Advanced options
+  timeout: 45000,
+  retries: 5,
+  retryDelay: 2000,
+
+  // Rate limiting
+  rateLimit: {
+    requests: 100,
+    window: 60000, // Per minute
+  },
+
+  // Custom headers
+  headers: {
+    'User-Agent': 'MyApp/1.0',
+    'X-Source': 'mobile-app',
+  },
+
+  // Logging
+  logger: customLogger,
+  logLevel: 'info', // 'debug', 'info', 'warn', 'error'
+});
+```
+
+## Getting API Credentials
+
+### Sandbox Credentials
+
+For testing, you can get sandbox credentials instantly:
+
+<Steps>
+  <Step title="Visit Tingg Developer Portal">
+    Go to [developer.tingg.africa](https://developer.tingg.africa) and create an account
+  </Step>
+
+  <Step title="Create Sandbox Application">
+    Click "Create App" and select "Sandbox Environment"
+  </Step>
+
+  <Step title="Get Your Keys">
+    Copy your API Key (client secret) and Public Key (client ID) from the dashboard
+  </Step>
+
+  <Step title="Configure Service Code">
+    Set up your service code in the Tingg portal - this identifies your business
+  </Step>
+
+  <Step title="Set Environment Variables">
+    ```bash TINGG_API_KEY=tingg_test_your_api_key_here
+    TINGG_PUBLIC_KEY=tingg_test_your_public_key_here TINGG_SERVICE_CODE=YOUR_SERVICE_CODE
+    TINGG_PAYMENT_OPTION_CODE=SAFKE ```
+  </Step>
+</Steps>
+
+### Production Credentials
+
+For live payments, you need to complete Tingg's onboarding:
+
+<Accordion title="Production Onboarding Process">
+  1. **Business Registration** - Submit business documents and details 2. **Compliance Review** -
+  KYC/AML verification (3-5 business days) 3. **Integration Testing** - Complete test scenarios with
+  Tingg team 4. **Go-Live Approval** - Final review and approval 5. **Production Keys** - Receive
+  live API credentials
+  <Warning>
+    Production approval typically takes 5-7 business days. Plan accordingly for your launch
+    timeline.
+  </Warning>
+</Accordion>
+
+## Usage Examples
+
+### Basic Collection
+
+```typescript
+import { PaymentClient } from '@fundkit/core';
+import { Tingg } from '@fundkit/tingg';
+
+const tingg = new Tingg({
+  apiKey: process.env.TINGG_API_KEY!,
+  publicKey: process.env.TINGG_PUBLIC_KEY!,
+  serviceCode: process.env.TINGG_SERVICE_CODE!,
+  paymentOptionCode: process.env.TINGG_PAYMENT_OPTION_CODE!,
+});
+
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [tingg],
+  environment: 'sandbox',
+});
+
+// Process payment
+const transaction = {
+  amount: 10000, // 100.00 KES
+  currency: 'KES',
+  operator: 'safaricom',
+  accountNumber: '254701234567',
+  externalId: 'order_12345',
+  reason: 'Product purchase',
+};
+
+try {
+  const result = await client.collection(transaction);
+  console.log('Payment initiated:', result);
+} catch (error) {
+  console.error('Payment failed:', error.message);
+}
+```
+
+### Multi-Country Payment
+
+```typescript
+// Kenya payment
+const kenyaPayment = {
+  amount: 5000, // 50.00 KES
+  currency: 'KES',
+  operator: 'safaricom',
+  accountNumber: '254701234567',
+  externalId: 'kenya_order_123',
+  reason: 'Service payment',
+};
+
+// Uganda payment
+const ugandaPayment = {
+  amount: 20000, // 200.00 UGX
+  currency: 'UGX',
+  operator: 'mtn',
+  accountNumber: '256779280949',
+  externalId: 'uganda_order_456',
+  reason: 'Product delivery',
+};
+
+// Tanzania payment
+const tanzaniaPayment = {
+  amount: 50000, // 500.00 TZS
+  currency: 'TZS',
+  operator: 'vodacom',
+  accountNumber: '255754123456',
+  externalId: 'tz_order_789',
+  reason: 'Subscription payment',
+};
+
+// Process payments
+const [kenyaResult, ugandaResult, tanzaniaResult] = await Promise.allSettled([
+  client.collection(kenyaPayment),
+  client.collection(ugandaPayment),
+  client.collection(tanzaniaPayment),
+]);
+```
+
+### Dynamic Operator Selection
+
+```typescript
+// Helper function to determine operator from phone number
+function getOperatorFromPhone(phoneNumber: string, country: string): string {
+  const phone = phoneNumber.replace(/^\+/, '');
+
+  switch (country) {
+    case 'KE': // Kenya
+      if (
+        phone.startsWith('25470') ||
+        phone.startsWith('25471') ||
+        phone.startsWith('25472') ||
+        phone.startsWith('25473') ||
+        phone.startsWith('25474') ||
+        phone.startsWith('25475') ||
+        phone.startsWith('25476') ||
+        phone.startsWith('25477') ||
+        phone.startsWith('25478') ||
+        phone.startsWith('25479')
+      ) {
+        return 'safaricom';
+      } else if (phone.startsWith('25473') || phone.startsWith('25474')) {
+        return 'airtel';
+      }
+      break;
+
+    case 'UG': // Uganda
+      if (phone.startsWith('25677') || phone.startsWith('25678')) {
+        return 'mtn';
+      } else if (phone.startsWith('25670') || phone.startsWith('25675')) {
+        return 'airtel';
+      }
+      break;
+
+    case 'TZ': // Tanzania
+      if (phone.startsWith('25574') || phone.startsWith('25575')) {
+        return 'vodacom';
+      } else if (phone.startsWith('25568') || phone.startsWith('25569')) {
+        return 'airtel';
+      }
+      break;
+  }
+
+  throw new Error(`Unable to determine operator for ${phoneNumber} in ${country}`);
+}
+
+// Usage
+const phoneNumber = '254701234567';
+const country = 'KE';
+const operator = getOperatorFromPhone(phoneNumber, country);
+
+const transaction = {
+  amount: 1000,
+  currency: 'KES',
+  operator: operator,
+  accountNumber: phoneNumber,
+  externalId: 'dynamic_order_123',
+  reason: 'Dynamic operator payment',
+};
+```
+
+## Transaction Limits
+
+### Amount Limits by Currency
+
+<Tabs>
+  <Tab title="Kenya (KES)">
+    - **Minimum:** 128 KES (~$0.80 USD) - **Maximum:** 320,000 KES (~$2,000 USD) - **Daily limit:**
+    1,000,000 KES per merchant - **Monthly limit:** 10,000,000 KES per merchant
+  </Tab>
+
+  <Tab title="Uganda (UGX)">
+    - **Minimum:** 3,200 UGX (~$0.80 USD) - **Maximum:** 8,000,000 UGX (~$2,000 USD) - **Daily
+    limit:** 25,000,000 UGX per merchant - **Monthly limit:** 100,000,000 UGX per merchant
+  </Tab>
+
+  <Tab title="Tanzania (TZS)">
+    - **Minimum:** 2,000 TZS (~$0.80 USD) - **Maximum:** 5,000,000 TZS (~$2,000 USD) - **Daily
+    limit:** 15,000,000 TZS per merchant - **Monthly limit:** 50,000,000 TZS per merchant
+  </Tab>
+
+  <Tab title="Rwanda (RWF)">
+    - **Minimum:** 1,000 RWF (~$0.80 USD) - **Maximum:** 2,500,000 RWF (~$2,000 USD) - **Daily
+    limit:** 10,000,000 RWF per merchant - **Monthly limit:** 50,000,000 RWF per merchant
+  </Tab>
+
+  <Tab title="Malawi (MWK)">
+    - **Minimum:** 1,300 MWK (~$0.80 USD) - **Maximum:** 3,250,000 MWK (~$2,000 USD) - **Daily
+    limit:** 10,000,000 MWK per merchant - **Monthly limit:** 50,000,000 MWK per merchant
+  </Tab>
+
+  <Tab title="Zambia (ZMW)">
+    - **Minimum:** 20 ZMW (~$0.80 USD) - **Maximum:** 50,000 ZMW (~$2,000 USD) - **Daily limit:**
+    200,000 ZMW per merchant - **Monthly limit:** 1,000,000 ZMW per merchant
+  </Tab>
+
+  <Tab title="Zimbabwe (ZWL)">
+    - **Minimum:** 800 ZWL (~$0.80 USD) - **Maximum:** 2,000,000 ZWL (~$2,000 USD) - **Daily
+    limit:** 10,000,000 ZWL per merchant - **Monthly limit:** 50,000,000 ZWL per merchant
+  </Tab>
+</Tabs>
+
+### Rate Limits
+
+- **API Requests:** 100 requests per minute
+- **Concurrent Transactions:** 50 simultaneous transactions
+- **Bulk Operations:** 1,000 transactions per batch
+
+## Payment Option Codes
+
+Tingg uses specific codes to identify mobile money operators. Here are the common codes:
+
+### Kenya
+
+- **SAFKE** - Safaricom M-Pesa
+- **MTNKE** - MTN Mobile Money
+- **AIRKE** - Airtel Money
+
+### Uganda
+
+- **SAFUG** - Safaricom (if available)
+- **MTNUG** - MTN Mobile Money
+- **AIRUG** - Airtel Money
+
+### Tanzania
+
+- **SAFTZ** - Safaricom (if available)
+- **MTNTZ** - MTN Mobile Money
+- **AIRTZ** - Airtel Money
+
+### Rwanda
+
+- **SAFRW** - Safaricom (if available)
+- **MTNRW** - MTN Mobile Money
+- **AIRRW** - Airtel Money
+
+### Malawi
+
+- **SAFMW** - Safaricom (if available)
+- **MTNMW** - MTN Mobile Money
+- **AIRMW** - Airtel Money
+
+### Zambia
+
+- **SAFZM** - Safaricom (if available)
+- **MTNZM** - MTN Mobile Money
+- **AIRZM** - Airtel Money
+
+### Zimbabwe
+
+- **SAFZW** - Safaricom (if available)
+- **MTNZW** - MTN Mobile Money
+- **AIRZW** - Airtel Money
+
+## Error Handling
+
+### Common Tingg Errors
+
+```typescript
+try {
+  const result = await client.collection(transaction);
+} catch (error) {
+  switch (error.code) {
+    case 'TINGG_INSUFFICIENT_FUNDS':
+      showMessage('Customer has insufficient balance');
+      break;
+
+    case 'TINGG_INVALID_PHONE':
+      showMessage('Invalid phone number format');
+      break;
+
+    case 'TINGG_NETWORK_UNAVAILABLE':
+      showMessage('Mobile network is currently unavailable');
+      break;
+
+    case 'TINGG_CUSTOMER_CANCELLED':
+      showMessage('Customer cancelled the payment');
+      break;
+
+    case 'TINGG_DUPLICATE_TRANSACTION':
+      showMessage('Duplicate transaction detected');
+      break;
+
+    case 'TINGG_ACCOUNT_BLOCKED':
+      showMessage('Customer account is temporarily blocked');
+      break;
+
+    case 'TINGG_SERVICE_CODE_REQUIRED':
+      showMessage('Service code is required. Please configure your Tingg service code.');
+      break;
+
+    case 'TINGG_PAYMENT_OPTION_REQUIRED':
+      showMessage('Payment option code is required. Please specify the mobile money operator.');
+      break;
+
+    default:
+      showMessage('Payment failed. Please try again.');
+      logError(error);
+  }
+}
+```
+
+### Error Details
+
+<AccordionGroup>
+  <Accordion icon="credit-card" title="Payment Errors">
+    **TINGG_INSUFFICIENT_FUNDS** - Customer doesn't have enough money **TINGG_CUSTOMER_CANCELLED** -
+    Customer declined payment prompt **TINGG_TIMEOUT** - Customer didn't respond to payment prompt
+    **TINGG_INVALID_PIN** - Customer entered wrong PIN
+  </Accordion>
+
+  <Accordion icon="phone" title="Account Errors">
+    **TINGG_INVALID_PHONE** - Phone number format is incorrect **TINGG_ACCOUNT_BLOCKED** - Customer
+    account is suspended **TINGG_ACCOUNT_NOT_FOUND** - Phone number not registered
+    **TINGG_ACCOUNT_LIMIT_EXCEEDED** - Transaction exceeds account limits
+  </Accordion>
+
+  <Accordion icon="network-wired" title="System Errors">
+    **TINGG_NETWORK_UNAVAILABLE** - Mobile network is down **TINGG_PROVIDER_MAINTENANCE** - Tingg
+    system maintenance **TINGG_RATE_LIMITED** - Too many requests **TINGG_AUTHENTICATION_FAILED** -
+    Invalid API credentials
+  </Accordion>
+
+  <Accordion icon="cog" title="Configuration Errors">
+    **TINGG_SERVICE_CODE_REQUIRED** - Service code not provided **TINGG_PAYMENT_OPTION_REQUIRED** -
+    Payment option code not provided **TINGG_INVALID_SERVICE_CODE** - Service code is invalid
+    **TINGG_INVALID_PAYMENT_OPTION** - Payment option code is invalid
+  </Accordion>
+</AccordionGroup>
+
+## Testing in Sandbox
+
+### Test Phone Numbers
+
+Tingg provides special test phone numbers for different scenarios:
+
+```typescript
+// Test numbers for different outcomes
+const testNumbers = {
+  // Kenya
+  success: '254700000001', // Always succeeds
+  insufficientFunds: '254700000002', // Always fails with insufficient funds
+  timeout: '254700000003', // Always times out
+  cancelled: '254700000004', // Customer cancels
+
+  // Uganda
+  successUganda: '256779000001', // Always succeeds
+  failUganda: '256779000002', // Always fails
+
+  // Tanzania
+  successTanzania: '255754000001', // Always succeeds
+  failTanzania: '255754000002', // Always fails
+};
+
+// Test transaction
+const testTransaction = {
+  amount: 5000,
+  currency: 'KES',
+  operator: 'safaricom',
+  accountNumber: testNumbers.success,
+  externalId: 'test_' + Date.now(),
+  reason: 'Test payment',
+};
+```
+
+### Sandbox Environment Features
+
+<AccordionGroup>
+  <Accordion icon="bolt" title="Instant Responses">
+    Sandbox transactions complete immediately without actual SMS prompts
+  </Accordion>
+
+  <Accordion icon="repeat" title="Predictable Outcomes">
+    Use specific test numbers to simulate different scenarios
+  </Accordion>
+
+  <Accordion icon="globe" title="Multi-Country Testing">
+    Test all supported countries and currencies in sandbox
+  </Accordion>
+
+  <Accordion icon="chart-line" title="No Rate Limits">
+    Test as much as you want without hitting rate limits
+  </Accordion>
+</AccordionGroup>
+
+## Production Checklist
+
+Before going live with Tingg:
+
+<CardGroup cols={2}>
+  <Card title="Credentials" icon="key">
+    - [ ] Production API keys obtained - [ ] Service code configured - [ ] Payment option codes set
+    up - [ ] Environment set to 'production' - [ ] Credentials stored securely
+  </Card>
+
+  <Card title="Error Handling" icon="shield">
+    - [ ] All error codes handled - [ ] Retry logic implemented - [ ] User-friendly error messages -
+    [ ] Logging and monitoring setup
+  </Card>
+
+  <Card title="Configuration" icon="cog">
+    - [ ] Service code properly configured - [ ] Payment option codes mapped correctly - [ ]
+    Multi-country support tested - [ ] Operator detection working
+  </Card>
+
+  <Card title="Testing" icon="flask">
+    - [ ] End-to-end testing completed - [ ] Cross-country payments tested - [ ] Error scenarios
+    tested - [ ] Load testing performed
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card icon="shield-check" title="Security">
+    ```typescript
+    // Good: Store credentials securely
+    const tingg = new Tingg({
+      apiKey: process.env.TINGG_API_KEY!,
+      publicKey: process.env.TINGG_PUBLIC_KEY!,
+      serviceCode: process.env.TINGG_SERVICE_CODE!,
+      paymentOptionCode: process.env.TINGG_PAYMENT_OPTION_CODE!
+    });
+    
+    // Bad: Hardcode credentials
+    // const tingg = new Tingg({
+    //   apiKey: 'tingg_live_123456789',
+    //   publicKey: 'pk_live_abcdefghi',
+    //   serviceCode: 'HARDCODED_SERVICE',
+    //   paymentOptionCode: 'SAFKE'
+    // });
+    ```
+  </Card>
+  
+  <Card icon="arrows-rotate" title="Idempotency">
+    ```typescript
+    // Good: Use unique external IDs
+    const externalId = `order_${orderId}_${timestamp}`;
+    
+    // Bad: Non-unique IDs
+    // const externalId = 'payment';
+    ```
+  </Card>
+  
+  <Card icon="globe" title="Multi-Country">
+    ```typescript
+    // Good: Validate phone numbers by country
+    function validatePhoneNumber(phone: string, country: string): boolean {
+      const patterns = {
+        KE: /^254[0-9]{9}$/,
+        UG: /^256[0-9]{9}$/,
+        TZ: /^255[0-9]{9}$/
+      };
+      return patterns[country]?.test(phone) || false;
+    }
+    ```
+  </Card>
+  
+  <Card icon="clock" title="Timeouts">
+    ```typescript
+    // Good: Handle timeouts gracefully
+    try {
+      const result = await client.collection(transaction);
+    } catch (error) {
+      if (error.code === 'TINGG_TIMEOUT') {
+        // Check status instead of immediate retry
+        const status = await client.getTransaction({
+          provider: 'tingg',
+          txId: error.transactionId
+        });
+      }
+    }
+    ```
+  </Card>
+</CardGroup>
+
+## Support & Resources
+
+<CardGroup cols={2}>
+  <Card title="Tingg Documentation" icon="book" href="https://docs.tingg.africa">
+    Official Tingg API documentation
+  </Card>
+
+  <Card title="Developer Portal" icon="code" href="https://developer.tingg.africa">
+    Get API keys and manage your applications
+  </Card>
+
+  <Card title="Status Page" icon="chart-line" href="https://status.tingg.africa">
+    Check Tingg service status and uptime
+  </Card>
+
+  <Card title="Support" icon="headset" href="mailto:support@tingg.africa">
+    Contact Tingg technical support
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="HoneyCoin Provider" icon="credit-card" href="/providers/honeycoin">
+  Learn about HoneyCoin integration
+</Card>
+
+<Card title="Multi-Provider Setup" icon="layer-group" href="/core/providers">
+  Use multiple providers for redundancy
+</Card>
+
+<Card title="Error Handling" icon="shield-exclamation" href="/core/error-handling">
+  Implement robust error handling
+</Card>
+
+<Card title="Production Setup" icon="rocket" href="/advanced/production">
+  Prepare for production deployment
+</Card>
+
+</CardGroup>

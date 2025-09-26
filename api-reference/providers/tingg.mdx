@@ -1,0 +1,585 @@
+---
+title: 'Tingg Provider API'
+description: 'Complete API reference for Tingg payment provider'
+---
+
+## Tingg Class
+
+The main Tingg provider class for processing payments across multiple African countries.
+
+### Constructor
+
+```typescript
+new Tingg(config: TinggConfig)
+```
+
+#### Parameters
+
+<ParamField path="config" type="TinggConfig" required>
+  Configuration object for the Tingg provider
+</ParamField>
+
+### TinggConfig Interface
+
+```typescript
+interface TinggConfig {
+  apiKey: string;
+  publicKey: string;
+  serviceCode: string;
+  paymentOptionCode: string;
+  timeout?: number;
+  retries?: number;
+  retryDelay?: number;
+  logger?: Logger;
+}
+```
+
+#### Configuration Properties
+
+<ParamField path="apiKey" type="string" required>
+  Your Tingg API key (client secret) for OAuth authentication
+</ParamField>
+
+<ParamField path="publicKey" type="string" required>
+  Your Tingg public key (client ID) for OAuth authentication
+</ParamField>
+
+<ParamField path="serviceCode" type="string" required>
+  The service code assigned to your merchant account on the Tingg portal
+</ParamField>
+
+<ParamField path="paymentOptionCode" type="string" required>
+  The payer client code for the mobile money operator (e.g., 'SAFKE', 'MTNKE', 'AIRKE')
+</ParamField>
+
+<ParamField path="timeout" type="number" default="30000">
+  Request timeout in milliseconds
+</ParamField>
+
+<ParamField path="retries" type="number" default="3">
+  Number of retry attempts for failed requests
+</ParamField>
+
+<ParamField path="retryDelay" type="number" default="1000">
+  Delay between retry attempts in milliseconds
+</ParamField>
+
+<ParamField path="logger" type="Logger">
+  Custom logger instance for debugging and monitoring
+</ParamField>
+
+## Methods
+
+### collection()
+
+Initiates a payment collection request.
+
+```typescript
+async collection(
+  tx: Transaction,
+  environment?: 'sandbox' | 'production',
+  user?: string,
+  fundkitApiKey?: string
+): Promise<CollectionResult>
+```
+
+#### Parameters
+
+<ParamField path="tx" type="Transaction" required>
+  Transaction details including amount, currency, operator, and account number
+</ParamField>
+
+<ParamField path="environment" type="'sandbox' | 'production'" default="production">
+  Environment mode for the transaction
+</ParamField>
+
+<ParamField path="user" type="string" default="anonymous">
+  User identifier for the transaction
+</ParamField>
+
+<ParamField path="fundkitApiKey" type="string">
+  FundKit API key for sandbox routing
+</ParamField>
+
+#### Returns
+
+<ParamField path="returns" type="CollectionResult">
+  Result object containing transaction details and status
+</ParamField>
+
+#### Example
+
+```typescript
+const tingg = new Tingg({
+  apiKey: 'your_api_key',
+  publicKey: 'your_public_key',
+  serviceCode: 'YOUR_SERVICE_CODE',
+  paymentOptionCode: 'SAFKE',
+});
+
+const transaction = {
+  amount: 10000,
+  currency: 'KES',
+  operator: 'safaricom',
+  accountNumber: '254701234567',
+  externalId: 'order_123',
+  reason: 'Product purchase',
+};
+
+try {
+  const result = await tingg.collection(transaction);
+  console.log('Payment initiated:', result.data.transactionId);
+} catch (error) {
+  console.error('Payment failed:', error.message);
+}
+```
+
+### getTransaction()
+
+Retrieves the status of a transaction.
+
+```typescript
+async getTransaction(
+  tx: string,
+  environment?: 'sandbox' | 'production',
+  fundkitApiKey?: string
+): Promise<TransactionResult>
+```
+
+#### Parameters
+
+<ParamField path="tx" type="string" required>
+  Transaction ID to query
+</ParamField>
+
+<ParamField path="environment" type="'sandbox' | 'production'" default="production">
+  Environment mode for the query
+</ParamField>
+
+<ParamField path="fundkitApiKey" type="string">
+  FundKit API key for sandbox routing
+</ParamField>
+
+#### Returns
+
+<ParamField path="returns" type="TransactionResult">
+  Transaction details including status, amount, and metadata
+</ParamField>
+
+#### Example
+
+```typescript
+try {
+  const transaction = await tingg.getTransaction('tx_123456789');
+  console.log('Transaction status:', transaction.data.status);
+  console.log('Amount:', transaction.data.amount);
+} catch (error) {
+  console.error('Failed to get transaction:', error.message);
+}
+```
+
+### getCoverage()
+
+Returns the coverage map for supported countries and currencies.
+
+```typescript
+getCoverage(): CoverageMap
+```
+
+#### Returns
+
+<ParamField path="returns" type="CoverageMap">
+  Coverage information including supported countries, currencies, and transaction limits
+</ParamField>
+
+#### Example
+
+```typescript
+const coverage = tingg.getCoverage();
+console.log('Supported currencies:', Object.keys(coverage));
+console.log('Kenya limits:', coverage.KES);
+```
+
+## Types
+
+### TinggCollectionRequest
+
+```typescript
+interface TinggCollectionRequest {
+  charge_msisdn: string;
+  charge_amount: number;
+  country_code: string;
+  currency_code: string;
+  merchant_transaction_id: string;
+  service_code: string;
+  payment_mode_code: string;
+  payment_option_code: string;
+}
+```
+
+### TinggCollectionResponse
+
+```typescript
+interface TinggCollectionResponse {
+  status: {
+    status_code: number;
+    status_description: string;
+  };
+  results: {
+    checkout_request_id: string;
+    merchant_transaction_id: string;
+    charge_request_id: number;
+    payment_instructions: string;
+    language_code: string;
+    charge_msisdn: number;
+    charge_amount: number;
+    charge_request_date: string;
+  };
+}
+```
+
+### TinggTransactionStatus
+
+```typescript
+interface TinggTransactionStatus {
+  status: {
+    status_code: string;
+    status_description: string;
+  };
+  results: {
+    checkout_request_id: number;
+    merchant_receipt: string;
+    payments: Array<{
+      id: number;
+      msisdn: number;
+      payment_option_transaction_id: string;
+      account_number: string;
+      customer_name: string;
+      amount_paid: number;
+      gateway_transaction_id: string;
+      date_payment_received: string;
+      gateway_overall_status: number;
+      currency_id: string;
+      country_id: string;
+      service_id: string;
+      payer_narration: string;
+      checkout_request_id: number;
+      merchant_receipt: string;
+      receiver_narration: string;
+      date_payment_acknowledged: string;
+      created_at: string;
+      payment_option_id: number;
+    }>;
+  };
+}
+```
+
+## Status Codes
+
+### Transaction Status Codes
+
+Tingg uses specific status codes to indicate transaction states:
+
+<CardGroup cols={2}>
+  <Card title="130" icon="clock">
+    **New Request** - Transaction has been created and is waiting for customer action
+  </Card>
+
+  <Card title="178" icon="check">
+    **Full Payment** - Complete payment received and processed
+  </Card>
+
+  <Card title="183" icon="check-circle">
+    **Accepted** - Payment received and acknowledged by merchant
+  </Card>
+
+  <Card title="188" icon="check-double">
+    **Received** - Payment received, awaiting merchant acknowledgment
+  </Card>
+
+  <Card title="99" icon="x">
+    **Failed Payment** - Payment failed but request remains open
+  </Card>
+
+  <Card title="129" icon="clock-exclamation">
+    **Expired** - Request expired with no payment received
+  </Card>
+
+  <Card title="179" icon="exclamation">
+    **Expired with Partial** - Request expired with partial payments (will be reversed)
+  </Card>
+
+  <Card title="180" icon="x-circle">
+    **Rejected** - Payment received but rejected by merchant
+  </Card>
+
+  <Card title="176" icon="pause">
+    **Partial Payment** - Partial payment received and marked as closed
+  </Card>
+
+  <Card title="184" icon="arrow-left">
+    **Refund Initiated** - Partial refund initiated
+  </Card>
+
+  <Card title="185" icon="arrow-left">
+    **Full Refund Initiated** - Full refund initiated
+  </Card>
+
+  <Card title="186" icon="check">
+    **Partial Refund Complete** - Partial refund successfully processed
+  </Card>
+
+  <Card title="187" icon="check">
+    **Full Refund Complete** - Full refund successfully processed
+  </Card>
+
+  <Card title="191" icon="clock-exclamation">
+    **Refund Expired** - Refund request has expired
+  </Card>
+
+  <Card title="422" icon="exclamation-triangle">
+    **Invalid Request** - Request contains invalid data
+  </Card>
+</CardGroup>
+
+### HTTP Status Codes
+
+<CardGroup cols={2}>
+  <Card title="200" icon="check">
+    **Success** - Request processed successfully
+  </Card>
+
+  <Card title="400" icon="exclamation-triangle">
+    **Bad Request** - Invalid request parameters
+  </Card>
+
+  <Card title="401" icon="lock">
+    **Unauthorized** - Invalid or expired authentication
+  </Card>
+
+  <Card title="403" icon="ban">
+    **Forbidden** - Access denied or insufficient permissions
+  </Card>
+
+  <Card title="404" icon="question">
+    **Not Found** - Resource not found
+  </Card>
+
+  <Card title="422" icon="exclamation">
+    **Unprocessable Entity** - Request validation failed
+  </Card>
+
+  <Card title="500" icon="exclamation-triangle">
+    **Internal Server Error** - Tingg system error
+  </Card>
+
+  <Card title="1001" icon="question">
+    **No Request Found** - Transaction ID not found
+  </Card>
+
+  <Card title="1007" icon="globe">
+    **Missing Country Code** - Country code not provided
+  </Card>
+
+  <Card title="1013" icon="code">
+    **Not JSON** - Request body is not valid JSON
+  </Card>
+
+  <Card title="1014" icon="tag">
+    **Missing Transaction ID** - Merchant transaction ID not provided
+  </Card>
+
+  <Card title="1015" icon="tag">
+    **Missing Checkout ID** - Checkout request ID not provided
+  </Card>
+
+  <Card title="1017" icon="phone">
+    **Invalid Phone** - Phone number format is invalid
+  </Card>
+
+  <Card title="1027" icon="dollar-sign">
+    **Invalid Amount** - Amount outside allowed limits
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+### TinggError Class
+
+```typescript
+class TinggError extends Error {
+  code: string;
+  status: number;
+  details?: any;
+  provider: string;
+  endpoint: string;
+}
+```
+
+### Common Error Codes
+
+<AccordionGroup>
+  <Accordion icon="credit-card" title="Payment Errors">
+    **TINGG_INSUFFICIENT_FUNDS** - Customer account has insufficient balance
+    **TINGG_CUSTOMER_CANCELLED** - Customer declined the payment **TINGG_PAYMENT_TIMEOUT** -
+    Customer didn't respond in time **TINGG_INVALID_PIN** - Customer entered incorrect PIN
+  </Accordion>
+
+  <Accordion icon="phone" title="Account Errors">
+    **TINGG_INVALID_PHONE** - Phone number format is incorrect **TINGG_PHONE_NOT_REGISTERED** -
+    Phone not registered for mobile money **TINGG_ACCOUNT_SUSPENDED** - Customer account is
+    suspended **TINGG_DAILY_LIMIT_EXCEEDED** - Customer exceeded daily limits
+  </Accordion>
+
+  <Accordion icon="server" title="System Errors">
+    **TINGG_NETWORK_ERROR** - Mobile network unavailable **TINGG_SERVICE_UNAVAILABLE** - Tingg
+    service temporarily down **TINGG_RATE_LIMITED** - Too many requests
+    **TINGG_AUTHENTICATION_FAILED** - Invalid API credentials
+  </Accordion>
+
+  <Accordion icon="cog" title="Configuration Errors">
+    **TINGG_SERVICE_CODE_REQUIRED** - Service code not provided **TINGG_PAYMENT_OPTION_REQUIRED** -
+    Payment option code not provided **TINGG_INVALID_SERVICE_CODE** - Service code is invalid
+    **TINGG_INVALID_PAYMENT_OPTION** - Payment option code is invalid
+  </Accordion>
+</AccordionGroup>
+
+## Examples
+
+### Basic Payment Collection
+
+```typescript
+import { Tingg } from '@fundkit/tingg';
+
+const tingg = new Tingg({
+  apiKey: process.env.TINGG_API_KEY!,
+  publicKey: process.env.TINGG_PUBLIC_KEY!,
+  serviceCode: process.env.TINGG_SERVICE_CODE!,
+  paymentOptionCode: 'SAFKE', // Safaricom Kenya
+});
+
+const transaction = {
+  amount: 5000,
+  currency: 'KES',
+  operator: 'safaricom',
+  accountNumber: '254701234567',
+  externalId: 'order_12345',
+  reason: 'Product purchase',
+};
+
+try {
+  const result = await tingg.collection(transaction);
+  console.log('Payment initiated:', result.data.transactionId);
+} catch (error) {
+  console.error('Payment failed:', error.message);
+}
+```
+
+### Multi-Country Payment Processing
+
+```typescript
+const countries = [
+  { code: 'KE', currency: 'KES', operator: 'safaricom', paymentOption: 'SAFKE' },
+  { code: 'UG', currency: 'UGX', operator: 'mtn', paymentOption: 'MTNUG' },
+  { code: 'TZ', currency: 'TZS', operator: 'vodacom', paymentOption: 'SAFTZ' },
+];
+
+async function processMultiCountryPayment(country: any, amount: number, phone: string) {
+  const tingg = new Tingg({
+    apiKey: process.env.TINGG_API_KEY!,
+    publicKey: process.env.TINGG_PUBLIC_KEY!,
+    serviceCode: process.env.TINGG_SERVICE_CODE!,
+    paymentOptionCode: country.paymentOption,
+  });
+
+  const transaction = {
+    amount: amount,
+    currency: country.currency,
+    operator: country.operator,
+    accountNumber: phone,
+    externalId: `payment_${country.code}_${Date.now()}`,
+    reason: `Payment for ${country.code}`,
+  };
+
+  return await tingg.collection(transaction);
+}
+```
+
+### Transaction Status Monitoring
+
+```typescript
+async function monitorTransaction(transactionId: string) {
+  const tingg = new Tingg({
+    apiKey: process.env.TINGG_API_KEY!,
+    publicKey: process.env.TINGG_PUBLIC_KEY!,
+    serviceCode: process.env.TINGG_SERVICE_CODE!,
+    paymentOptionCode: 'SAFKE',
+  });
+
+  const maxAttempts = 10;
+  const interval = 5000; // 5 seconds
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const transaction = await tingg.getTransaction(transactionId);
+      const status = transaction.data.status;
+
+      console.log(`Attempt ${attempt}: Status = ${status}`);
+
+      if (status === 'SUCCESS' || status === 'FAILED' || status === 'EXPIRED') {
+        return transaction;
+      }
+
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, interval));
+      }
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed:`, error.message);
+      if (attempt === maxAttempts) throw error;
+    }
+  }
+
+  throw new Error('Transaction monitoring timeout');
+}
+```
+
+### Error Handling with Retry Logic
+
+```typescript
+async function collectionWithRetry(transaction: Transaction, maxRetries: number = 3) {
+  const tingg = new Tingg({
+    apiKey: process.env.TINGG_API_KEY!,
+    publicKey: process.env.TINGG_PUBLIC_KEY!,
+    serviceCode: process.env.TINGG_SERVICE_CODE!,
+    paymentOptionCode: 'SAFKE',
+  });
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await tingg.collection(transaction);
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed:`, error.message);
+
+      // Don't retry configuration errors
+      if (
+        error.code === 'TINGG_SERVICE_CODE_REQUIRED' ||
+        error.code === 'TINGG_PAYMENT_OPTION_REQUIRED'
+      ) {
+        throw error;
+      }
+
+      // Don't retry validation errors
+      if (error.code === 'TINGG_INVALID_PHONE' || error.code === 'TINGG_INVALID_AMOUNT') {
+        throw error;
+      }
+
+      if (attempt === maxRetries) {
+        throw error;
+      }
+
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+}
+```
