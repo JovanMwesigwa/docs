@@ -86,16 +86,16 @@ const result = await client.payout(payoutTx);
     {/* transaction data */}; // Status: Not yet submitted ```
   </Step>
 
-  <Step title="Submitted">
-    Transaction is sent to the selected payment provider ```typescript const result = await
-    client.collection(transaction); // Status: 'pending' // Provider: Selected provider name //
-    TransactionId: Provider's transaction ID ```
-  </Step>
+<Step title="Submitted">
+  Transaction is sent to the selected payment provider ```typescript const result = await
+  client.collection(transaction); // Status: 'pending' // Provider: Selected provider name //
+  TransactionId: Provider's transaction ID ```
+</Step>
 
-  <Step title="Processing">
-    Provider processes the transaction with the mobile network ```typescript // Status: 'processing'
-    // Customer receives SMS prompt to confirm payment ```
-  </Step>
+<Step title="Processing">
+  Provider processes the transaction with the mobile network ```typescript // Status: 'processing'
+  // Customer receives SMS prompt to confirm payment ```
+</Step>
 
   <Step title="Completed or Failed">
     Final status is determined ```typescript // Success: Status: 'completed' // Failure: Status:
@@ -335,21 +335,21 @@ FundKit validates all transaction data before processing:
 ```typescript
 // Valid transaction
 const validTx = {
-  amount: 5000, // ✅ Positive number
-  currency: 'UGX', // ✅ Supported currency
-  operator: 'mtn', // ✅ Valid operator
-  accountNumber: '256779280949', // ✅ Valid phone format
-  externalId: 'order_123', // ✅ Unique identifier
-  reason: 'Test payment', // ✅ Optional description
+  amount: 5000, // Positive number
+  currency: 'UGX', // Supported currency
+  operator: 'mtn', // Valid operator
+  accountNumber: '256779280949', // Valid phone format
+  externalId: 'order_123', // Unique identifier
+  reason: 'Test payment', // Optional description
 };
 
 // Invalid transaction examples
 const invalidTx = {
-  amount: -1000, // ❌ Negative amount
-  currency: 'USD', // ❌ Unsupported currency
-  operator: 'vodafone', // ❌ Unsupported operator
-  accountNumber: '123', // ❌ Invalid phone number
-  externalId: '', // ❌ Empty external ID
+  amount: -1000, // Negative amount
+  currency: 'USD', // Unsupported currency
+  operator: 'vodafone', // Unsupported operator
+  accountNumber: '123', // Invalid phone number
+  externalId: '', // Empty external ID
 };
 ```
 

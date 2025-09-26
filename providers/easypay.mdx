@@ -28,13 +28,13 @@ EasyPay is Uganda's premier mobile money payment processor, offering fast and re
 
 ### Capabilities
 
-- ✅ **Fast Collections** - Average completion time < 30 seconds
-- ✅ **Real-time Webhooks** - Instant status notifications
-- ✅ **Status Checking** - Query transaction status anytime
-- ✅ **Bulk Processing** - Handle multiple transactions efficiently
-- ✅ **High Success Rate** - 98%+ success rate for valid transactions
-- ⏳ **Payouts** - Coming soon
-- ❌ **International** - Uganda only
+- **Fast Collections** - Average completion time < 30 seconds
+- **Real-time Webhooks** - Instant status notifications
+- **Status Checking** - Query transaction status anytime
+- **Bulk Processing** - Handle multiple transactions efficiently
+- **High Success Rate** - 98%+ success rate for valid transactions
+- **Payouts** - Coming soon
+- **International** - Uganda only
 
 ## Installation
 
@@ -128,15 +128,15 @@ Get started immediately with sandbox testing:
     Go to [developers.easypay.ug](https://developers.easypay.ug) and create an account
   </Step>
 
-  <Step title="Create Sandbox App">
-    Click "Create Application" and select "Sandbox Environment"
-  </Step>
+<Step title="Create Sandbox App">Click "Create Application" and select "Sandbox Environment"</Step>
 
-  <Step title="Get Your Credentials">Copy your Client ID and Secret Key from the dashboard</Step>
+<Step title="Get Your Credentials">Copy your Client ID and Secret Key from the dashboard</Step>
 
   <Step title="Configure Environment">
-    ```bash EASYPAY_CLIENT_ID=ep_test_client_your_id_here
-    EASYPAY_SECRET=ep_test_secret_your_key_here ```
+    ```bash
+    EASYPAY_CLIENT_ID=ep_test_client_your_id_here
+    EASYPAY_SECRET=ep_test_secret_your_key_here
+    ```
   </Step>
 </Steps>
 
@@ -393,16 +393,16 @@ try {
     **EP_INVALID_PIN** - Wrong PIN entered multiple times
   </Accordion>
 
-  <Accordion icon="phone" title="Account Errors">
-    **EP_INVALID_PHONE** - Phone number format is wrong **EP_PHONE_NOT_REGISTERED** - Phone not
-    registered for mobile money **EP_ACCOUNT_SUSPENDED** - Customer account is suspended
-    **EP_DAILY_LIMIT_EXCEEDED** - Customer exceeded daily limits
-  </Accordion>
+<Accordion icon="phone" title="Account Errors">
+  **EP_INVALID_PHONE** - Phone number format is wrong **EP_PHONE_NOT_REGISTERED** - Phone not
+  registered for mobile money **EP_ACCOUNT_SUSPENDED** - Customer account is suspended
+  **EP_DAILY_LIMIT_EXCEEDED** - Customer exceeded daily limits
+</Accordion>
 
-  <Accordion icon="server" title="System Errors">
-    **EP_NETWORK_ERROR** - Mobile network unavailable **EP_SERVICE_UNAVAILABLE** - EasyPay service
-    down **EP_RATE_LIMITED** - Too many requests **EP_AUTHENTICATION_FAILED** - Invalid credentials
-  </Accordion>
+<Accordion icon="server" title="System Errors">
+  **EP_NETWORK_ERROR** - Mobile network unavailable **EP_SERVICE_UNAVAILABLE** - EasyPay service
+  down **EP_RATE_LIMITED** - Too many requests **EP_AUTHENTICATION_FAILED** - Invalid credentials
+</Accordion>
 
   <Accordion icon="copy" title="Business Logic Errors">
     **EP_DUPLICATE_EXTERNAL_ID** - External ID already used **EP_AMOUNT_TOO_SMALL** - Amount below
@@ -556,13 +556,13 @@ async function handlePaymentFailed(payment) {
     Payment successful - money transferred
   </Card>
 
-  <Card title="payment.failed" icon="x-circle">
-    Payment failed - includes error details
-  </Card>
+<Card title="payment.failed" icon="x-circle">
+  Payment failed - includes error details
+</Card>
 
-  <Card title="payment.pending" icon="clock">
-    Payment initiated - waiting for customer
-  </Card>
+<Card title="payment.pending" icon="clock">
+  Payment initiated - waiting for customer
+</Card>
 
   <Card title="payment.timeout" icon="clock-exclamation">
     Payment timed out - customer didn't respond
@@ -616,9 +616,9 @@ async function runTestSuite() {
         reason: `Test: ${scenario.name}`,
       });
 
-      console.log(`✅ ${scenario.name}: Success`, result.data.status);
+      console.log(`${scenario.name}: Success`, result.data.status);
     } catch (error) {
-      console.log(`❌ ${scenario.name}: ${error.code} - ${error.message}`);
+      console.log(`${scenario.name}: ${error.code} - ${error.message}`);
     }
 
     // Brief pause between tests
@@ -805,13 +805,13 @@ setInterval(() => {
     Official EasyPay API documentation
   </Card>
 
-  <Card title="Developer Portal" icon="code" href="https://developers.easypay.ug">
-    Get API keys and manage applications
-  </Card>
+<Card title="Developer Portal" icon="code" href="https://developers.easypay.ug">
+  Get API keys and manage applications
+</Card>
 
-  <Card title="Status Page" icon="chart-line" href="https://status.easypay.ug">
-    Check EasyPay service status
-  </Card>
+<Card title="Status Page" icon="chart-line" href="https://status.easypay.ug">
+  Check EasyPay service status
+</Card>
 
   <Card title="Support" icon="headset" href="mailto:developers@easypay.ug">
     Contact EasyPay developer support

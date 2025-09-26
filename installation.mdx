@@ -41,10 +41,10 @@ Install the specific payment providers you want to support:
     **Features:** Collections, payouts, status checking
   </Tab>
 
-  <Tab title="EasyPay">
-    ```bash npm install @fundkit/easypay ``` **Supports:** MTN, Airtel mobile money in Uganda
-    **Features:** Collections, real-time webhooks
-  </Tab>
+<Tab title="EasyPay">
+  ```bash npm install @fundkit/easypay ``` **Supports:** MTN, Airtel mobile money in Uganda
+  **Features:** Collections, real-time webhooks
+</Tab>
 
   <Tab title="Tola">
     ```bash npm install @fundkit/tola ``` **Supports:** Mobile money and bank transfers in Uganda
@@ -71,8 +71,8 @@ npm install @fundkit/types
 
 <AccordionGroup>
   <Accordion icon="nodejs" title="Supported Node.js Versions">
-    FundKit supports the following Node.js versions: - **Node.js 16.x** ✅ (Minimum supported) -
-    **Node.js 18.x** ✅ (Recommended) - **Node.js 20.x** ✅ (Latest LTS) - **Node.js 22.x** ✅
+    FundKit supports the following Node.js versions: - **Node.js 16.x** (Minimum supported) -
+    **Node.js 18.x** (Recommended) - **Node.js 20.x** (Latest LTS) - **Node.js 22.x**
     (Current)
     <Warning>
       Node.js versions below 16.x are not supported due to missing ESM and crypto features.
@@ -279,9 +279,9 @@ try {
     providers: [],
     environment: 'sandbox',
   });
-  console.log('✅ PaymentClient instantiated successfully');
+  console.log('PaymentClient instantiated successfully');
 } catch (error) {
-  console.error('❌ Installation issue:', error.message);
+  console.error('Installation issue:', error.message);
 }
 ```
 
@@ -298,9 +298,9 @@ try {
     providers: [],
     environment: 'sandbox',
   });
-  console.log('✅ PaymentClient instantiated successfully');
+  console.log('PaymentClient instantiated successfully');
 } catch (error) {
-  console.error('❌ Installation issue:', error.message);
+  console.error('Installation issue:', error.message);
 }
 ```
 
@@ -325,11 +325,11 @@ node test.js
     node_modules package-lock.json && npm install` 4. Verify your package.json includes the packages
   </Accordion>
 
-  <Accordion icon="gear" title="TypeScript compilation issues">
-    For TypeScript issues: 1. Update to TypeScript 4.5+: `npm install -D typescript@latest` 2.
-    Enable `esModuleInterop` and `allowSyntheticDefaultImports` in tsconfig.json 3. Use `import
-    type` for type-only imports from `@fundkit/types`
-  </Accordion>
+<Accordion icon="gear" title="TypeScript compilation issues">
+  For TypeScript issues: 1. Update to TypeScript 4.5+: `npm install -D typescript@latest` 2. Enable
+  `esModuleInterop` and `allowSyntheticDefaultImports` in tsconfig.json 3. Use `import type` for
+  type-only imports from `@fundkit/types`
+</Accordion>
 
   <Accordion icon="cloud" title="Runtime environment issues">
     For specific runtime environments: **Cloudflare Workers:** Use `import` syntax, not `require()`
