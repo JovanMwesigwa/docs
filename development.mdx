@@ -4,9 +4,7 @@ description: 'Preview changes locally to update your docs'
 ---
 
 <Info>
-  **Prerequisites**:
-  - Node.js version 19 or higher
-  - A docs repository with a `docs.json` file
+  **Prerequisites**: - Node.js version 19 or higher - A docs repository with a `docs.json` file
 </Info>
 
 Follow these steps to install and run Mintlify on your operating system.
@@ -17,6 +15,7 @@ Follow these steps to install and run Mintlify on your operating system.
 ```bash
 npm i -g mint
 ```
+
 </Step>
 
 <Step title="Preview locally">
@@ -64,10 +63,43 @@ mint broken-links
 
 ## Deployment
 
+### Railway Deployment
+
+When deploying to Railway, ensure you're using Node.js v19 or higher. Railway may default to Node.js v18, which is incompatible with Mintlify.
+
+**To fix Node.js version on Railway:**
+
+1. **Option 1: Add `.nvmrc` file** (Recommended)
+   Create a `.nvmrc` file in your docs directory:
+
+   ```bash
+   echo "20" > .nvmrc
+   ```
+
+2. **Option 2: Specify in `package.json`**
+   Add an `engines` field to your `package.json`:
+
+   ```json
+   {
+     "engines": {
+       "node": ">=19.0.0"
+     }
+   }
+   ```
+
+3. **Option 3: Set in Railway Dashboard**
+   - Go to your Railway project settings
+   - Navigate to "Variables"
+   - Add `NODE_VERSION=20` (or `NODE_VERSION=19`)
+
 If the deployment is successful, you should see the following:
 
 <Frame>
-  <img src="/images/checks-passed.png" alt="Screenshot of a deployment confirmation message that says All checks have passed." style={{ borderRadius: '0.5rem' }} />
+  <img
+    src="/images/checks-passed.png"
+    alt="Screenshot of a deployment confirmation message that says All checks have passed."
+    style={{ borderRadius: '0.5rem' }}
+  />
 </Frame>
 
 ## Code formatting
@@ -83,11 +115,23 @@ We suggest using extensions on your IDE to recognize and format MDX. If you're a
     1. Remove the currently-installed version of the CLI: `npm remove -g mint`
     2. Upgrade to Node v19 or higher.
     3. Reinstall the CLI: `npm i -g mint`
+
   </Accordion>
 
-  <Accordion title="Issue: Encountering an unknown error">
+<Accordion title="Issue: Encountering an unknown error">
+  Solution: Go to the root of your device and delete the `~/.mintlify` folder. Then run `mint dev`
+  again.
+</Accordion>
+
+  <Accordion title='Error: Invalid regular expression flags (Railway deployment)'>
   
-    Solution: Go to the root of your device and delete the `~/.mintlify` folder. Then run `mint dev` again.
+    This error occurs when Railway is using Node.js v18 or lower. Mintlify requires Node.js v19 or higher.
+    
+    **Solution:**
+    1. Create a `.nvmrc` file in your docs directory with `20` (or `19`)
+    2. Or add `"engines": { "node": ">=19.0.0" }` to your `package.json`
+    3. Or set `NODE_VERSION=20` in Railway environment variables
+    4. Redeploy your application
   </Accordion>
 </AccordionGroup>
 
