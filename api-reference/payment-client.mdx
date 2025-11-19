@@ -14,35 +14,51 @@ The `PaymentClient` is the main entry point for FundKit integration. It provides
 Creates a new PaymentClient instance with provider configurations.
 
 **Parameters:**
-- `config` (object): Configuration object for providers
+- `config` (PaymentClientConfig): Configuration object
 
 **Example:**
 ```typescript
 import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
+import { EasyPay } from '@fundkit/easypay';
+
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+});
+
+const easypay = new EasyPay({
+  apiKey: process.env.EASYPAY_SECRET!,
+  clientId: process.env.EASYPAY_CLIENT_ID!,
+});
 
 const client = new PaymentClient({
-  honeycoin: {
-    apiKey: 'your-honeycoin-api-key',
-    environment: 'sandbox' // or 'production'
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [honeycoin, easypay],
+  environment: 'sandbox',
+  webhook: {
+    url: 'https://api.myapp.com/webhooks/fundkit',
+    secret: process.env.WEBHOOK_SECRET!,
   },
-  easypay: {
-    apiKey: 'your-easypay-api-key',
-    environment: 'sandbox'
-  },
-  tola: {
-    apiKey: 'your-tola-api-key',
-    environment: 'sandbox'
-  }
 });
 ```
 
 **Configuration Options:**
 
-| Provider | Required Fields | Optional Fields |
-|----------|----------------|-----------------|
-| `honeycoin` | `apiKey` | `environment`, `baseUrl`, `timeout` |
-| `easypay` | `apiKey` | `environment`, `baseUrl`, `timeout` |
-| `tola` | `apiKey` | `environment`, `baseUrl`, `timeout` |
+```typescript
+interface PaymentClientConfig {
+  apiKey: string;                    // Required: Your FundKit API key
+  providers: BaseProvider[];         // Required: Array of provider instances
+  environment?: 'sandbox' | 'production'; // Default: 'sandbox'
+  timeout?: number;                   // Request timeout in milliseconds
+  retries?: number;                   // Number of retry attempts
+  webhook?: {                         // Optional: Webhook configuration
+    url: string;                      // Webhook endpoint URL
+    secret: string;                   // Webhook secret for signature verification
+  };
+  logger?: Logger;                    // Custom logger instance
+}
+```
 
 ## Methods
 
@@ -236,31 +252,48 @@ client.on('error', (error) => {
 });
 ```
 
-## Configuration Options
+## Webhook Configuration
 
-### Environment Settings
+Webhooks are configured at the `PaymentClient` level, providing a unified webhook endpoint for all providers.
+
+### Webhook Configuration
 
 ```typescript
-interface ProviderConfig {
-  apiKey: string;
-  environment?: 'sandbox' | 'production';
-  baseUrl?: string;
-  timeout?: number;
-  retries?: number;
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [honeycoin, easypay],
+  webhook: {
+    url: 'https://api.myapp.com/webhooks/fundkit',
+    secret: process.env.WEBHOOK_SECRET!,
+  },
+});
+```
+
+### Webhook Event Structure
+
+All webhook events follow this unified structure:
+
+```typescript
+interface WebhookEvent {
+  event: 'transaction_completed' | 'transaction_failed' | 'transaction_pending';
+  data: {
+    transactionId: string;
+    transactionType: 'COLLECTION' | 'PAYOUT';
+    amount: string;
+    currency: string;
+    operator: string;
+    accountNumber: string;
+    externalId: string;
+    environment: 'sandbox' | 'production';
+  };
 }
 ```
 
-### Global Options
+### Webhook Headers
 
-```typescript
-const client = new PaymentClient(providerConfigs, {
-  defaultTimeout: 30000,
-  retryAttempts: 3,
-  retryDelay: 1000,
-  validateOnInit: true,
-  logLevel: 'info'
-});
-```
+Webhook requests include the following headers:
+- `X-Webhook-Signature`: HMAC-SHA256 signature
+- `X-Webhook-Timestamp`: Unix timestamp for replay attack prevention
 
 ## Error Handling
 
@@ -333,12 +366,3 @@ type CurrencyCode = 'UGX' | 'KES' | 'TZS' | 'RWF';
 ```typescript
 type ProviderName = 'honeycoin' | 'easypay' | 'tola';
 ```
-
-## Best Practices
-
-1. **Always handle errors**: Wrap API calls in try-catch blocks
-2. **Validate before submitting**: Use `validateRequest()` for client-side validation
-3. **Monitor transaction status**: Use webhooks or polling for status updates
-4. **Use proper phone format**: Always use international format (+country-code)
-5. **Handle provider failures**: Implement retry logic for transient failures
-6. **Secure API keys**: Never expose API keys in client-side code

@@ -94,23 +94,36 @@ Integrating mobile money and card providers is painful:
       <Step title="Start Building">
         ```typescript
         import { PaymentClient } from '@fundkit/core';
+        import { HoneyCoin } from '@fundkit/honeycoin';
+        import { EasyPay } from '@fundkit/easypay';
+
+        const honeycoin = new HoneyCoin({
+          apiKey: process.env.HONEYCOIN_API_KEY!,
+          publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+        });
+
+        const easypay = new EasyPay({
+          apiKey: process.env.EASYPAY_SECRET!,
+          clientId: process.env.EASYPAY_CLIENT_ID!,
+        });
 
         const client = new PaymentClient({
-          honeycoin: {
-            apiKey: 'your-honeycoin-api-key',
-            environment: 'sandbox'
+          apiKey: process.env.FUNDKIT_API_KEY!,
+          providers: [honeycoin, easypay],
+          environment: 'sandbox',
+          webhook: {
+            url: 'https://api.myapp.com/webhooks/fundkit',
+            secret: process.env.WEBHOOK_SECRET!,
           },
-          easypay: {
-            apiKey: 'your-easypay-api-key',
-            environment: 'sandbox'
-          }
         });
 
         // Collect payment
-        const result = await client.collect({
+        const result = await client.collection({
           amount: 10000,
           currency: 'UGX',
-          phoneNumber: '+256701234567',
+          operator: 'mtn',
+          accountNumber: '+256701234567',
+          externalId: 'order_12345',
           reason: 'Payment for order #12345'
         });
         ```

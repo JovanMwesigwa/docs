@@ -742,62 +742,6 @@ setInterval(() => {
 }, 60000);
 ```
 
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="bolt" title="Leverage Speed">
-    ```typescript
-    // Good: Use shorter timeouts with EasyPay
-    const easypay = new EasyPay({
-      apiKey: process.env.EASYPAY_SECRET!,
-      clientId: process.env.EASYPAY_CLIENT_ID!,
-      timeout: 20000 // 20 seconds is plenty
-    });
-    ```
-  </Card>
-  
-  <Card icon="webhook" title="Use Webhooks">
-    ```typescript
-    // Good: Always configure webhooks
-    const easypay = new EasyPay({
-      apiKey: process.env.EASYPAY_SECRET!,
-      clientId: process.env.EASYPAY_CLIENT_ID!,
-      webhookUrl: 'https://api.myapp.com/webhooks/easypay'
-    });
-    
-    // Bad: Polling for status
-    // setInterval(() => checkStatus(), 5000);
-    ```
-  </Card>
-  
-  <Card icon="shield-check" title="Validate Phone Numbers">
-    ```typescript
-    // Good: Validate phone numbers
-    function validateUgandanPhone(phone: string): boolean {
-      return /^256(77|78|70|75|74)[0-9]{7}$/.test(phone);
-    }
-    
-    if (!validateUgandanPhone(phoneNumber)) {
-      throw new Error('Invalid Ugandan phone number');
-    }
-    ```
-  </Card>
-  
-  <Card icon="retry" title="Smart Retry Logic">
-    ```typescript
-    // Good: Don't retry validation errors
-    if (error.code === 'EP_INVALID_PHONE') {
-      throw error; // Don't retry
-    }
-    
-    // Retry system errors only
-    if (error.code === 'EP_NETWORK_ERROR') {
-      await retryAfterDelay(5000);
-    }
-    ```
-  </Card>
-</CardGroup>
-
 ## Support & Resources
 
 <CardGroup cols={2}>
@@ -832,10 +776,6 @@ setInterval(() => {
 
 <Card title="Webhooks Guide" icon="webhook" href="/advanced/webhooks">
   Master webhook implementation
-</Card>
-
-<Card title="Production Deployment" icon="rocket" href="/advanced/production">
-  Deploy EasyPay to production
 </Card>
 
 </CardGroup>

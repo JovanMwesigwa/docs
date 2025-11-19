@@ -68,7 +68,7 @@ const honeycoin = new HoneyCoin({
 </ParamField>
 
 <ParamField path="publicKey" type="string" required>
-  Your HoneyCoin public key for webhook signature verification.
+  Your HoneyCoin public key for API authentication.
 </ParamField>
 
 <ParamField path="environment" type="'sandbox' | 'production'" default="sandbox">
@@ -83,10 +83,6 @@ const honeycoin = new HoneyCoin({
   Number of retry attempts for failed requests.
 </ParamField>
 
-<ParamField path="webhookUrl" type="string">
-  URL to receive webhook notifications for transaction updates.
-</ParamField>
-
 ### Advanced Configuration
 
 ```typescript
@@ -99,10 +95,6 @@ const honeycoin = new HoneyCoin({
   timeout: 45000,
   retries: 5,
   retryDelay: 2000,
-
-  // Webhook configuration
-  webhookUrl: 'https://api.myapp.com/webhooks/honeycoin',
-  webhookSecret: process.env.HONEYCOIN_WEBHOOK_SECRET,
 
   // Rate limiting
   rateLimit: {
@@ -343,108 +335,12 @@ try {
 
 ## Webhooks
 
-### Webhook Configuration
+Webhooks are configured at the `PaymentClient` level, not at the provider level. This provides a unified webhook endpoint for all providers.
 
-```typescript
-const honeycoin = new HoneyCoin({
-  apiKey: process.env.HONEYCOIN_API_KEY!,
-  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-  webhookUrl: 'https://api.myapp.com/webhooks/honeycoin',
-  webhookSecret: process.env.HONEYCOIN_WEBHOOK_SECRET,
-});
-```
-
-### Webhook Handler
-
-```typescript
-import crypto from 'crypto';
-import express from 'express';
-
-const app = express();
-app.use(express.raw({ type: 'application/json' }));
-
-app.post('/webhooks/honeycoin', (req, res) => {
-  const signature = req.headers['x-honeycoin-signature'];
-  const payload = req.body;
-
-  // Verify webhook signature
-  const expectedSignature = crypto
-    .createHmac('sha256', process.env.HONEYCOIN_WEBHOOK_SECRET!)
-    .update(payload)
-    .digest('hex');
-
-  if (signature !== `sha256=${expectedSignature}`) {
-    return res.status(400).json({ error: 'Invalid signature' });
-  }
-
-  const event = JSON.parse(payload.toString());
-
-  // Handle different event types
-  switch (event.type) {
-    case 'transaction.completed':
-      handleTransactionCompleted(event.data);
-      break;
-
-    case 'transaction.failed':
-      handleTransactionFailed(event.data);
-      break;
-
-    case 'transaction.pending':
-      handleTransactionPending(event.data);
-      break;
-
-    case 'payout.completed':
-      handlePayoutCompleted(event.data);
-      break;
-
-    default:
-      console.log('Unknown event type:', event.type);
-  }
-
-  res.status(200).json({ received: true });
-});
-
-function handleTransactionCompleted(transaction) {
-  console.log('Transaction completed:', transaction.externalId);
-
-  // Update your database
-  updateTransactionStatus(transaction.externalId, 'completed');
-
-  // Send confirmation to customer
-  sendConfirmationEmail(transaction.customerEmail, transaction);
-
-  // Fulfill the order
-  fulfillOrder(transaction.externalId);
-}
-```
-
-### Webhook Events
-
-<CardGroup cols={2}>
-  <Card title="transaction.completed" icon="check">
-    Payment was successful and money has been transferred
-  </Card>
-
-<Card title="transaction.failed" icon="x">
-  Payment failed due to various reasons (insufficient funds, etc.)
-</Card>
-
-<Card title="transaction.pending" icon="clock">
-  Payment is waiting for customer confirmation
-</Card>
-
-<Card title="transaction.timeout" icon="clock-exclamation">
-  Payment timed out waiting for customer response
-</Card>
-
-<Card title="payout.completed" icon="arrow-right">
-  Payout was successfully sent to recipient
-</Card>
-
-  <Card title="payout.failed" icon="arrow-right-from-line">
-    Payout failed to process
-  </Card>
-</CardGroup>
+<Info>
+  For webhook configuration and implementation details, see the [Webhooks
+  Guide](/advanced/webhooks).
+</Info>
 
 ## Testing in Sandbox
 
@@ -507,8 +403,8 @@ Before going live with HoneyCoin:
 
 <CardGroup cols={2}>
   <Card title="Credentials" icon="key">
-    - [ ] Production API keys obtained - [ ] Webhook URL configured - [ ] Environment set to
-    'production' - [ ] Credentials stored securely
+    - [ ] Production API keys obtained - [ ] Environment set to 'production' - [ ] Credentials stored
+    securely
   </Card>
 
 <Card title="Error Handling" icon="shield">
@@ -517,75 +413,13 @@ Before going live with HoneyCoin:
 </Card>
 
 <Card title="Webhooks" icon="webhook">
-  - [ ] Webhook endpoint secured (HTTPS) - [ ] Signature verification implemented - [ ] Idempotency
-  handling added - [ ] Event types handled properly
+  - [ ] Webhook configured in PaymentClient - [ ] Webhook endpoint secured (HTTPS) - [ ] Signature
+  verification implemented - [ ] Event types handled properly
 </Card>
 
   <Card title="Testing" icon="flask">
     - [ ] End-to-end testing completed - [ ] Cross-country payments tested - [ ] Error scenarios
     tested - [ ] Load testing performed
-  </Card>
-</CardGroup>
-
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="shield-check" title="Security">
-    ```typescript
-    // Good: Store credentials securely
-    const honeycoin = new HoneyCoin({
-      apiKey: process.env.HONEYCOIN_API_KEY!,
-      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!
-    });
-    
-    // Bad: Hardcode credentials
-    // const honeycoin = new HoneyCoin({
-    //   apiKey: 'hc_live_123456789',
-    //   publicKey: 'pk_live_abcdefghi'
-    // });
-    ```
-  </Card>
-  
-  <Card icon="arrows-rotate" title="Idempotency">
-    ```typescript
-    // Good: Use unique external IDs
-    const externalId = `order_${orderId}_${timestamp}`;
-    
-    // Bad: Non-unique IDs
-    // const externalId = 'payment';
-    ```
-  </Card>
-  
-  <Card icon="bell" title="Webhooks">
-    ```typescript
-    // Good: Always verify webhook signatures
-    const isValid = verifyWebhookSignature(
-      payload, 
-      signature, 
-      webhookSecret
-    );
-    
-    if (!isValid) {
-      return res.status(400).end();
-    }
-    ```
-  </Card>
-  
-  <Card icon="clock" title="Timeouts">
-    ```typescript
-    // Good: Handle timeouts gracefully
-    try {
-      const result = await client.collection(transaction);
-    } catch (error) {
-      if (error.code === 'HC_TIMEOUT') {
-        // Check status instead of immediate retry
-        const status = await client.getTransaction({
-          provider: 'honeycoin',
-          txId: error.transactionId
-        });
-      }
-    }
-    ```
   </Card>
 </CardGroup>
 
@@ -623,10 +457,6 @@ Before going live with HoneyCoin:
 
 <Card title="Error Handling" icon="shield-exclamation" href="/core/error-handling">
   Implement robust error handling
-</Card>
-
-<Card title="Production Setup" icon="rocket" href="/advanced/production">
-  Prepare for production deployment
 </Card>
 
 </CardGroup>

@@ -1,6 +1,6 @@
 ---
-title: "Webhooks"
-description: "Implement real-time transaction updates with FundKit webhooks"
+title: 'Webhooks'
+description: 'Implement real-time transaction updates with FundKit webhooks'
 ---
 
 ## Overview
@@ -8,7 +8,9 @@ description: "Implement real-time transaction updates with FundKit webhooks"
 Webhooks provide real-time notifications about transaction status changes, eliminating the need for polling. When a transaction completes, fails, or changes status, FundKit sends an HTTP POST request to your configured endpoint with the updated information.
 
 <Info>
-  Webhooks are the recommended way to handle transaction status updates. They're faster, more efficient, and provide better user experience than polling for status changes.
+  **Webhooks are optional.** You can poll for transaction status using `getTransaction()`, or
+  configure webhooks for real-time updates. Webhooks are recommended for production but not required
+  for sandbox testing.
 </Info>
 
 ## Why Use Webhooks?
@@ -17,15 +19,15 @@ Webhooks provide real-time notifications about transaction status changes, elimi
   <Card title="Real-time Updates" icon="bolt">
     Get notified instantly when transactions complete, fail, or change status
   </Card>
-  
-  <Card title="Reduced API Calls" icon="chart-line-down">
-    No need to poll for status updates - webhooks push updates to you
-  </Card>
-  
-  <Card title="Better Performance" icon="gauge-high">
-    Lower latency and reduced server load compared to polling
-  </Card>
-  
+
+<Card title="Reduced API Calls" icon="chart-line-down">
+  No need to poll for status updates - webhooks push updates to you
+</Card>
+
+<Card title="Better Performance" icon="gauge-high">
+  Lower latency and reduced server load compared to polling
+</Card>
+
   <Card title="Reliable Delivery" icon="shield-check">
     Built-in retry mechanisms ensure webhook delivery
   </Card>
@@ -35,677 +37,211 @@ Webhooks provide real-time notifications about transaction status changes, elimi
 
 <Steps>
   <Step title="Configure Webhook URL">
-    Set your webhook endpoint URL in provider configuration
+    Set your webhook endpoint URL and secret in PaymentClient configuration
   </Step>
-  
-  <Step title="Transaction Event Occurs">
-    Payment completes, fails, or status changes
-  </Step>
-  
-  <Step title="Webhook Sent">
-    FundKit sends HTTP POST to your endpoint with event data
-  </Step>
-  
-  <Step title="Verify & Process">
-    Your server verifies signature and processes the event
-  </Step>
-  
-  <Step title="Respond with 200">
-    Acknowledge receipt with HTTP 200 status code
-  </Step>
+
+<Step title="Transaction Event Occurs">Payment completes, fails, or status changes</Step>
+
+<Step title="Webhook Sent">FundKit sends HTTP POST to your endpoint with event data</Step>
+
+<Step title="Verify & Process">Your server verifies signature and processes the event</Step>
+
+  <Step title="Respond with 200">Acknowledge receipt with HTTP 200 status code</Step>
 </Steps>
 
 ## Configuration
 
-### Provider-Specific Setup
+### PaymentClient-Level Configuration
 
-<Tabs>
-  <Tab title="HoneyCoin">
+Webhooks are configured at the `PaymentClient` level, not at the provider level. This provides a unified webhook endpoint for all providers:
+
     ```typescript
+
+import { PaymentClient } from '@fundkit/core';
     import { HoneyCoin } from '@fundkit/honeycoin';
+import { EasyPay } from '@fundkit/easypay';
     
     const honeycoin = new HoneyCoin({
       apiKey: process.env.HONEYCOIN_API_KEY!,
       publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-      webhookUrl: 'https://api.myapp.com/webhooks/honeycoin',
-      webhookSecret: process.env.HONEYCOIN_WEBHOOK_SECRET
-    });
-    ```
-  </Tab>
-  
-  <Tab title="EasyPay">
-    ```typescript
-    import { EasyPay } from '@fundkit/easypay';
+});
     
     const easypay = new EasyPay({
       apiKey: process.env.EASYPAY_SECRET!,
       clientId: process.env.EASYPAY_CLIENT_ID!,
-      webhookUrl: 'https://api.myapp.com/webhooks/easypay',
-      webhookSecret: process.env.EASYPAY_WEBHOOK_SECRET
-    });
-    ```
-  </Tab>
-  
-  <Tab title="Tola">
-    ```typescript
-    import { Tola } from '@fundkit/tola';
-    
-    const tola = new Tola({
-      apiKey: process.env.TOLA_API_KEY!,
-      merchantId: process.env.TOLA_MERCHANT_ID!,
-      webhookUrl: 'https://api.myapp.com/webhooks/tola',
-      webhookSecret: process.env.TOLA_WEBHOOK_SECRET
-    });
-    ```
-  </Tab>
-</Tabs>
-
-### Multiple Webhook Endpoints
-
-Configure different endpoints for different event types:
-
-```typescript
-const tola = new Tola({
-  apiKey: process.env.TOLA_API_KEY!,
-  merchantId: process.env.TOLA_MERCHANT_ID!,
-  
-  // Multiple webhook endpoints
-  webhookEndpoints: [
-    {
-      url: 'https://api.myapp.com/webhooks/payments',
-      events: ['transaction.completed', 'transaction.failed'],
-      secret: process.env.PAYMENT_WEBHOOK_SECRET
-    },
-    {
-      url: 'https://api.myapp.com/webhooks/reconciliation',
-      events: ['reconciliation.ready', 'settlement.completed'],
-      secret: process.env.RECON_WEBHOOK_SECRET
-    }
-  ]
 });
-```
+
+const client = new PaymentClient({
+apiKey: process.env.FUNDKIT_API_KEY!,
+providers: [honeycoin, easypay],
+environment: 'sandbox',
+webhook: {
+url: 'https://api.myapp.com/webhooks/fundkit',
+secret: process.env.WEBHOOK_SECRET!,
+},
+});
+
+````
+
+<Info>
+  All providers will use the same webhook endpoint configured in `PaymentClient`. The webhook
+  payload will include a `provider` field to identify which provider processed the transaction.
+</Info>
+
+## Production Webhook Setup
+
+When moving to production, you need to configure webhooks in your FundKit dashboard and each provider's dashboard. This setup is **only required for production** - sandbox mode works without webhook configuration.
+
+<Steps>
+  <Step title="Navigate to Provider Webhooks">
+    Go to your app dashboard → **Providers** tab → **Provider Webhooks** section
+    <Frame>
+      <img
+        src="/images/provider-webhooks-dashboard.png"
+        alt="Provider Webhooks dashboard showing webhook URLs for each provider"
+        style={{ borderRadius: '0.5rem' }}
+      />
+    </Frame>
+  </Step>
+
+<Step title="Activate Webhooks">
+  Toggle on the webhook for each provider you're using (HoneyCoin, EasyPay, Tola, Tingg, etc.) The
+  webhook will show as **Active** (purple toggle) when enabled.
+</Step>
+
+<Step title="Copy Webhook URLs">
+  Click the **Copy** button next to each provider's webhook URL to copy it to your clipboard
+</Step>
+
+  <Step title="Configure in Provider Dashboard">
+    Paste the webhook URL into the corresponding provider's dashboard: - **HoneyCoin:** Dashboard →
+    Settings → Webhooks - **EasyPay:** Dashboard → Integration → Webhooks - **Tola:** Dashboard →
+    Configuration → Webhooks - **Tingg:** Dashboard → Settings → Webhook Configuration - And so on
+    for other providers
+  </Step>
+</Steps>
+
+<Info>
+  **Note:** - Webhook configuration is **only required for production**. In sandbox mode, you can
+  test transactions without webhooks by polling for status using `getTransaction()`. - The webhook
+  URL in your FundKit dashboard is automatically generated and unique to your app. - You must
+  activate and configure webhooks for each provider you plan to use in production.
+</Info>
 
 ## Webhook Events
 
 ### Common Event Types
 
 <AccordionGroup>
-  <Accordion icon="check-circle" title="transaction.completed">
+  <Accordion icon="check-circle" title="transaction_completed">
     **Triggered when:** Payment is successfully completed
-    
+
     **Typical timing:** 30 seconds to 5 minutes after initiation
-    
+
     **Action required:** Update order status, fulfill service, send confirmation
-    
+
     ```json
     {
-      "type": "transaction.completed",
+      "event": "transaction_completed",
       "data": {
-        "transactionId": "txn_abc123",
-        "externalId": "order_12345",
-        "status": "completed",
-        "amount": 10000,
+        "transactionId": "tx_1763540996633_x8jbw9qb41s",
+        "transactionType": "COLLECTION",
+        "amount": "9500",
         "currency": "UGX",
-        "completedAt": "2024-01-15T10:30:00Z",
-        "fees": 100,
-        "netAmount": 9900
+        "operator": "mtn",
+        "accountNumber": "256779280949",
+        "externalId": "x8jbw9qb41s",
+        "environment": "sandbox"
       }
     }
     ```
   </Accordion>
-  
-  <Accordion icon="x-circle" title="transaction.failed">
+
+  <Accordion icon="x-circle" title="transaction_failed">
     **Triggered when:** Payment fails for any reason
-    
+
     **Typical timing:** Immediately to 5 minutes after initiation
-    
+
     **Action required:** Update order status, notify customer, log for analysis
-    
+
     ```json
     {
-      "type": "transaction.failed",
+      "event": "transaction_failed",
       "data": {
-        "transactionId": "txn_abc123",
-        "externalId": "order_12345",
-        "status": "failed",
-        "amount": 10000,
+        "transactionId": "tx_1763540996633_x8jbw9qb41s",
+        "transactionType": "COLLECTION",
+        "amount": "9500",
         "currency": "UGX",
-        "failedAt": "2024-01-15T10:25:00Z",
-        "errorCode": "INSUFFICIENT_FUNDS",
-        "errorMessage": "Customer has insufficient balance"
+        "operator": "mtn",
+        "accountNumber": "256779280949",
+        "externalId": "x8jbw9qb41s",
+        "environment": "sandbox"
       }
     }
     ```
   </Accordion>
-  
-  <Accordion icon="clock" title="transaction.pending">
+
+  <Accordion icon="clock" title="transaction_pending">
     **Triggered when:** Payment is initiated and waiting for customer action
-    
+
     **Typical timing:** Immediately after payment initiation
-    
+
     **Action required:** Show pending status to customer
-    
+
     ```json
     {
-      "type": "transaction.pending",
+      "event": "transaction_pending",
       "data": {
-        "transactionId": "txn_abc123",
-        "externalId": "order_12345",
-        "status": "pending",
-        "amount": 10000,
+        "transactionId": "tx_1763540996633_x8jbw9qb41s",
+        "transactionType": "COLLECTION",
+        "amount": "9500",
         "currency": "UGX",
-        "pendingAt": "2024-01-15T10:20:00Z"
-      }
-    }
-    ```
-  </Accordion>
-  
-  <Accordion icon="clock-exclamation" title="transaction.timeout">
-    **Triggered when:** Payment times out waiting for customer
-    
-    **Typical timing:** 5-10 minutes after initiation
-    
-    **Action required:** Update status, allow retry, notify customer
-    
-    ```json
-    {
-      "type": "transaction.timeout",
-      "data": {
-        "transactionId": "txn_abc123",
-        "externalId": "order_12345",
-        "status": "timeout",
-        "amount": 10000,
-        "currency": "UGX",
-        "timeoutAt": "2024-01-15T10:30:00Z"
+        "operator": "mtn",
+        "accountNumber": "256779280949",
+        "externalId": "x8jbw9qb41s",
+        "environment": "sandbox"
       }
     }
     ```
   </Accordion>
 </AccordionGroup>
 
-### Provider-Specific Events
+### Webhook Event Structure
 
-<Tabs>
-  <Tab title="HoneyCoin Events">
-    - `transaction.completed`
-    - `transaction.failed`
-    - `transaction.pending`
-    - `transaction.timeout`
-    - `payout.completed`
-    - `payout.failed`
-    - `reconciliation.ready`
-  </Tab>
-  
-  <Tab title="EasyPay Events">
-    - `payment.completed`
-    - `payment.failed`
-    - `payment.pending`
-    - `payment.timeout`
-    - `batch.completed`
-    - `batch.failed`
-  </Tab>
-  
-  <Tab title="Tola Events">
-    - `transaction.completed`
-    - `transaction.failed`
-    - `transaction.pending`
-    - `payout.completed`
-    - `escrow.created`
-    - `escrow.released`
-    - `reconciliation.ready`
-    - `settlement.completed`
-  </Tab>
-</Tabs>
+All webhook events follow this structure:
 
-## Webhook Implementation
-
-### Basic Express.js Handler
-
-```typescript
-import express from 'express';
-import crypto from 'crypto';
-
-const app = express();
-
-// Important: Use raw body parser for webhook signature verification
-app.use('/webhooks', express.raw({ type: 'application/json' }));
-
-app.post('/webhooks/:provider', async (req, res) => {
-  const provider = req.params.provider;
-  const signature = req.headers['x-webhook-signature'] || req.headers['x-' + provider + '-signature'];
-  const timestamp = req.headers['x-webhook-timestamp'];
-  const payload = req.body;
-  
-  try {
-    // Verify webhook signature
-    if (!verifyWebhookSignature(provider, payload, signature, timestamp)) {
-      console.error('Invalid webhook signature');
-      return res.status(400).json({ error: 'Invalid signature' });
-    }
-    
-    // Parse webhook data
-    const event = JSON.parse(payload.toString());
-    console.log(`Received ${provider} webhook:`, event.type);
-    
-    // Process the webhook
-    await processWebhook(provider, event);
-    
-    // Always respond with 200 for successful processing
-    res.status(200).json({ 
-      received: true, 
-      processed: true,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('Webhook processing error:', error);
-    
-    // Return 500 to trigger provider retry
-    res.status(500).json({ 
-      error: 'Processing failed',
-      retry: true 
-    });
-  }
-});
-
-function verifyWebhookSignature(
-  provider: string, 
-  payload: Buffer, 
-  signature: string, 
-  timestamp: string
-): boolean {
-  const secret = getWebhookSecret(provider);
-  
-  // Check timestamp to prevent replay attacks (5 minute window)
-  const now = Math.floor(Date.now() / 1000);
-  const webhookTimestamp = parseInt(timestamp);
-  
-  if (Math.abs(now - webhookTimestamp) > 300) {
-    console.error('Webhook timestamp too old');
-    return false;
-  }
-  
-  // Calculate expected signature
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(`${timestamp}.${payload}`)
-    .digest('hex');
-  
-  // Use timing-safe comparison
-  return crypto.timingSafeEqual(
-    Buffer.from(signature.replace('sha256=', ''), 'hex'),
-    Buffer.from(expectedSignature, 'hex')
-  );
-}
-
-function getWebhookSecret(provider: string): string {
-  switch (provider) {
-    case 'honeycoin':
-      return process.env.HONEYCOIN_WEBHOOK_SECRET!;
-    case 'easypay':
-      return process.env.EASYPAY_WEBHOOK_SECRET!;
-    case 'tola':
-      return process.env.TOLA_WEBHOOK_SECRET!;
-    default:
-      throw new Error(`Unknown provider: ${provider}`);
-  }
-}
-```
-
-### Robust Webhook Processor
-
-```typescript
-class WebhookProcessor {
-  private readonly retryableErrors = [
-    'DATABASE_CONNECTION_ERROR',
-    'EXTERNAL_SERVICE_UNAVAILABLE',
-    'TEMPORARY_FAILURE'
-  ];
-  
-  async processWebhook(provider: string, event: WebhookEvent) {
-    const startTime = Date.now();
-    
-    try {
-      // Idempotency check
-      const existingEvent = await this.getProcessedEvent(event.id);
-      if (existingEvent) {
-        console.log('Event already processed:', event.id);
-        return { processed: true, duplicate: true };
+    ```json
+    {
+  "event": "transaction_completed" | "transaction_failed" | "transaction_pending",
+      "data": {
+    "transactionId": "string",
+    "transactionType": "COLLECTION" | "PAYOUT",
+    "amount": "string",
+    "currency": "string",
+    "operator": "string",
+    "accountNumber": "string",
+    "externalId": "string",
+    "environment": "sandbox" | "production"
       }
-      
-      // Mark event as processing
-      await this.markEventProcessing(event.id);
-      
-      // Route to appropriate handler
-      await this.routeEvent(provider, event);
-      
-      // Mark as successfully processed
-      await this.markEventProcessed(event.id, {
-        processedAt: new Date(),
-        processingTime: Date.now() - startTime
-      });
-      
-      console.log(`Webhook processed successfully: ${event.id}`);
-      return { processed: true };
-      
-    } catch (error) {
-      console.error('Webhook processing failed:', error);
-      
-      // Mark as failed
-      await this.markEventFailed(event.id, error);
-      
-      // Determine if error is retryable
-      if (this.isRetryableError(error)) {
-        throw error; // This will trigger provider retry
-      }
-      
-      // Non-retryable error - acknowledge to prevent retries
-      return { processed: false, error: error.message };
     }
-  }
-  
-  private async routeEvent(provider: string, event: WebhookEvent) {
-    const eventKey = `${provider}.${event.type}`;
-    
-    switch (eventKey) {
-      case 'honeycoin.transaction.completed':
-      case 'easypay.payment.completed':
-      case 'tola.transaction.completed':
-        await this.handleTransactionCompleted(event.data);
-        break;
-        
-      case 'honeycoin.transaction.failed':
-      case 'easypay.payment.failed':
-      case 'tola.transaction.failed':
-        await this.handleTransactionFailed(event.data);
-        break;
-        
-      case 'tola.escrow.released':
-        await this.handleEscrowReleased(event.data);
-        break;
-        
-      case 'tola.reconciliation.ready':
-        await this.handleReconciliationReady(event.data);
-        break;
-        
-      default:
-        console.log('Unhandled webhook event:', eventKey);
-        await this.logUnhandledEvent(provider, event);
-    }
-  }
-  
-  private async handleTransactionCompleted(transaction: any) {
-    console.log('Processing completed transaction:', transaction.externalId);
-    
-    // Update database
-    await this.updateTransactionStatus(transaction.externalId, 'completed', {
-      completedAt: transaction.completedAt,
-      fees: transaction.fees,
-      netAmount: transaction.netAmount,
-      providerReference: transaction.providerReference
-    });
-    
-    // Send customer notification
-    await this.sendCustomerNotification(transaction, 'success');
-    
-    // Fulfill order/service
-    await this.fulfillOrder(transaction.externalId);
-    
-    // Update analytics
-    await this.updateAnalytics('transaction_completed', transaction);
-    
-    // Trigger any post-completion workflows
-    await this.triggerPostCompletionWorkflows(transaction);
-  }
-  
-  private async handleTransactionFailed(transaction: any) {
-    console.log('Processing failed transaction:', transaction.externalId);
-    
-    // Update database
-    await this.updateTransactionStatus(transaction.externalId, 'failed', {
-      failedAt: transaction.failedAt,
-      errorCode: transaction.errorCode,
-      errorMessage: transaction.errorMessage
-    });
-    
-    // Send customer notification with helpful message
-    await this.sendCustomerNotification(transaction, 'failed');
-    
-    // Log for analysis
-    await this.logFailedTransaction(transaction);
-    
-    // Update analytics
-    await this.updateAnalytics('transaction_failed', transaction);
-    
-    // Check if retry is appropriate
-    if (this.shouldRetryTransaction(transaction.errorCode)) {
-      await this.scheduleTransactionRetry(transaction);
-    }
-  }
-  
-  private isRetryableError(error: any): boolean {
-    return this.retryableErrors.includes(error.code) ||
-           error.message.includes('timeout') ||
-           error.message.includes('connection');
-  }
-}
-```
+    ```
 
-### Next.js API Route Handler
+**Event Types:**
 
-```typescript
-// pages/api/webhooks/[provider].ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { verifyWebhookSignature, processWebhook } from '@/lib/webhooks';
+- `transaction_completed` - Payment successfully completed
+- `transaction_failed` - Payment failed
+- `transaction_pending` - Payment initiated and waiting for customer action
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-  
-  const provider = req.query.provider as string;
-  const signature = req.headers['x-webhook-signature'] as string;
-  const timestamp = req.headers['x-webhook-timestamp'] as string;
-  
-  try {
-    // Get raw body for signature verification
-    const payload = JSON.stringify(req.body);
-    
-    // Verify signature
-    const isValid = verifyWebhookSignature(
-      provider,
-      Buffer.from(payload),
-      signature,
-      timestamp
-    );
-    
-    if (!isValid) {
-      return res.status(400).json({ error: 'Invalid signature' });
-    }
-    
-    // Process webhook
-    const result = await processWebhook(provider, req.body);
-    
-    res.status(200).json(result);
-  } catch (error) {
-    console.error('Webhook error:', error);
-    res.status(500).json({ error: 'Processing failed' });
-  }
-}
+**Data Fields:**
 
-// Disable body parsing to get raw body for signature verification
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
-  },
-}
-```
-
-## Security Best Practices
-
-### Signature Verification
-
-Always verify webhook signatures to ensure authenticity:
-
-```typescript
-function verifyWebhookSignature(
-  payload: Buffer,
-  signature: string,
-  secret: string,
-  timestamp?: string
-): boolean {
-  // Include timestamp in signature to prevent replay attacks
-  const signaturePayload = timestamp ? `${timestamp}.${payload}` : payload;
-  
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(signaturePayload)
-    .digest('hex');
-  
-  // Remove algorithm prefix if present (e.g., "sha256=")
-  const cleanSignature = signature.replace(/^sha256=/, '');
-  
-  return crypto.timingSafeEqual(
-    Buffer.from(cleanSignature, 'hex'),
-    Buffer.from(expectedSignature, 'hex')
-  );
-}
-```
-
-### Timestamp Validation
-
-Prevent replay attacks by validating timestamps:
-
-```typescript
-function validateTimestamp(timestamp: string, toleranceSeconds = 300): boolean {
-  const now = Math.floor(Date.now() / 1000);
-  const webhookTime = parseInt(timestamp);
-  
-  // Check if timestamp is within tolerance window
-  return Math.abs(now - webhookTime) <= toleranceSeconds;
-}
-```
-
-### IP Allowlisting
-
-Restrict webhook access to known provider IPs:
-
-```typescript
-const PROVIDER_IPS = {
-  honeycoin: ['52.203.14.55', '52.202.103.144'],
-  easypay: ['41.210.142.65', '102.68.78.34'],
-  tola: ['197.157.64.45', '102.68.79.123']
-};
-
-function validateSourceIP(provider: string, clientIP: string): boolean {
-  const allowedIPs = PROVIDER_IPS[provider];
-  return allowedIPs ? allowedIPs.includes(clientIP) : false;
-}
-
-// Express middleware
-app.use('/webhooks/:provider', (req, res, next) => {
-  const provider = req.params.provider;
-  const clientIP = req.ip || req.connection.remoteAddress;
-  
-  if (!validateSourceIP(provider, clientIP)) {
-    return res.status(403).json({ error: 'IP not allowed' });
-  }
-  
-  next();
-});
-```
-
-## Idempotency & Retry Handling
-
-### Idempotent Processing
-
-Ensure webhooks can be safely retried:
-
-```typescript
-class IdempotentWebhookProcessor {
-  private processedEvents = new Map<string, ProcessingResult>();
-  
-  async processWebhook(event: WebhookEvent): Promise<ProcessingResult> {
-    const eventId = this.getEventId(event);
-    
-    // Check if already processed
-    const existingResult = this.processedEvents.get(eventId);
-    if (existingResult) {
-      console.log('Webhook already processed:', eventId);
-      return existingResult;
-    }
-    
-    // Process the event
-    const result = await this.doProcessWebhook(event);
-    
-    // Store result for future duplicate detection
-    this.processedEvents.set(eventId, result);
-    
-    return result;
-  }
-  
-  private getEventId(event: WebhookEvent): string {
-    // Use event ID if available, otherwise create from content
-    return event.id || crypto
-      .createHash('sha256')
-      .update(JSON.stringify(event))
-      .digest('hex');
-  }
-}
-```
-
-### Database-Backed Idempotency
-
-```typescript
-async function processWebhookIdempotent(event: WebhookEvent) {
-  const eventId = event.id || generateEventId(event);
-  
-  // Try to insert with unique constraint
-  try {
-    await db.webhookEvents.create({
-      id: eventId,
-      provider: event.provider,
-      type: event.type,
-      status: 'processing',
-      receivedAt: new Date(),
-      data: event.data
-    });
-  } catch (error) {
-    if (error.code === 'UNIQUE_CONSTRAINT_VIOLATION') {
-      console.log('Webhook already processed:', eventId);
-      return { processed: true, duplicate: true };
-    }
-    throw error;
-  }
-  
-  try {
-    // Process the webhook
-    await processWebhookLogic(event);
-    
-    // Mark as completed
-    await db.webhookEvents.update(eventId, {
-      status: 'completed',
-      processedAt: new Date()
-    });
-    
-    return { processed: true };
-  } catch (error) {
-    // Mark as failed
-    await db.webhookEvents.update(eventId, {
-      status: 'failed',
-      error: error.message,
-      failedAt: new Date()
-    });
-    
-    throw error;
-  }
-}
-```
+- `transactionId` - Unique transaction identifier
+- `transactionType` - Type of transaction (COLLECTION or PAYOUT)
+- `amount` - Transaction amount as a string (in smallest currency unit)
+- `currency` - Currency code (e.g., UGX, KES, TZS)
+- `operator` - Mobile money operator (e.g., mtn, airtel, mpesa)
+- `accountNumber` - Customer account/phone number
+- `externalId` - Your external reference ID
+- `environment` - Environment where transaction occurred (sandbox or production)
 
 ## Testing Webhooks
 
@@ -720,26 +256,30 @@ Set up local webhook testing:
     # or download from https://ngrok.com/
     ```
   </Step>
-  
+
   <Step title="Start Your Local Server">
     ```bash
     npm run dev  # Your app running on localhost:3000
     ```
   </Step>
-  
+
   <Step title="Expose with ngrok">
     ```bash
     ngrok http 3000
     ```
     Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`)
   </Step>
-  
+
   <Step title="Configure Webhook URL">
     ```typescript
-    const honeycoin = new HoneyCoin({
-      apiKey: process.env.HONEYCOIN_API_KEY!,
-      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
-      webhookUrl: 'https://abc123.ngrok.io/webhooks/honeycoin'
+    const client = new PaymentClient({
+      apiKey: process.env.FUNDKIT_API_KEY!,
+      providers: [honeycoin, easypay],
+      environment: 'sandbox',
+      webhook: {
+        url: 'https://abc123.ngrok.io/webhooks/fundkit',
+        secret: process.env.WEBHOOK_SECRET!,
+      },
     });
     ```
   </Step>
@@ -751,255 +291,86 @@ Set up local webhook testing:
 class WebhookTester {
   private webhookUrl: string;
   private secret: string;
-  
+
   constructor(webhookUrl: string, secret: string) {
     this.webhookUrl = webhookUrl;
     this.secret = secret;
   }
-  
+
   async sendTestWebhook(eventType: string, data: any) {
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const payload = JSON.stringify({
-      id: `test_${Date.now()}`,
-      type: eventType,
+      event: eventType,
       data: data,
-      timestamp: timestamp
     });
-    
+
     const signature = this.generateSignature(payload, timestamp);
-    
+
     const response = await fetch(this.webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Webhook-Signature': `sha256=${signature}`,
-        'X-Webhook-Timestamp': timestamp
+        'X-Webhook-Timestamp': timestamp,
       },
-      body: payload
+      body: payload,
     });
-    
+
     console.log('Test webhook response:', response.status);
     return response;
   }
-  
+
   private generateSignature(payload: string, timestamp: string): string {
-    return crypto
-      .createHmac('sha256', this.secret)
-      .update(`${timestamp}.${payload}`)
-      .digest('hex');
+    return crypto.createHmac('sha256', this.secret).update(`${timestamp}.${payload}`).digest('hex');
   }
-  
+
   async testTransactionCompleted(externalId: string) {
-    return this.sendTestWebhook('transaction.completed', {
-      transactionId: `test_txn_${Date.now()}`,
-      externalId: externalId,
-      status: 'completed',
-      amount: 10000,
+    return this.sendTestWebhook('transaction_completed', {
+      transactionId: `tx_${Date.now()}_${externalId}`,
+      transactionType: 'COLLECTION',
+      amount: '10000',
       currency: 'UGX',
-      completedAt: new Date().toISOString(),
-      fees: 100,
-      netAmount: 9900
+      operator: 'mtn',
+      accountNumber: '256701234567',
+      externalId: externalId,
+      environment: 'sandbox',
     });
   }
-  
+
   async testTransactionFailed(externalId: string) {
-    return this.sendTestWebhook('transaction.failed', {
-      transactionId: `test_txn_${Date.now()}`,
-      externalId: externalId,
-      status: 'failed',
-      amount: 10000,
+    return this.sendTestWebhook('transaction_failed', {
+      transactionId: `tx_${Date.now()}_${externalId}`,
+      transactionType: 'COLLECTION',
+      amount: '10000',
       currency: 'UGX',
-      failedAt: new Date().toISOString(),
-      errorCode: 'INSUFFICIENT_FUNDS',
-      errorMessage: 'Customer has insufficient balance'
+      operator: 'mtn',
+      accountNumber: '256701234567',
+      externalId: externalId,
+      environment: 'sandbox',
+    });
+  }
+
+  async testTransactionPending(externalId: string) {
+    return this.sendTestWebhook('transaction_pending', {
+      transactionId: `tx_${Date.now()}_${externalId}`,
+      transactionType: 'COLLECTION',
+      amount: '10000',
+      currency: 'UGX',
+      operator: 'mtn',
+      accountNumber: '256701234567',
+      externalId: externalId,
+      environment: 'sandbox',
     });
   }
 }
 
 // Usage
-const tester = new WebhookTester(
-  'http://localhost:3000/webhooks/test',
-  'test_webhook_secret'
-);
+const tester = new WebhookTester('http://localhost:3000/webhooks/test', 'test_webhook_secret');
 
 await tester.testTransactionCompleted('test_order_123');
 await tester.testTransactionFailed('test_order_456');
-```
-
-## Monitoring & Debugging
-
-### Webhook Monitoring Dashboard
-
-```typescript
-class WebhookMonitor {
-  async getWebhookStats(timeframe: string = '24h') {
-    const stats = await db.webhookEvents.aggregate([
-      {
-        $match: {
-          receivedAt: {
-            $gte: new Date(Date.now() - this.parseTimeframe(timeframe))
-          }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            provider: '$provider',
-            type: '$type',
-            status: '$status'
-          },
-          count: { $sum: 1 },
-          avgProcessingTime: { $avg: '$processingTime' }
-        }
-      }
-    ]);
-    
-    return this.formatStats(stats);
-  }
-  
-  async getFailedWebhooks(limit: number = 50) {
-    return db.webhookEvents.find({
-      status: 'failed'
-    })
-    .sort({ failedAt: -1 })
-    .limit(limit);
-  }
-  
-  async retryFailedWebhook(eventId: string) {
-    const event = await db.webhookEvents.findById(eventId);
-    if (!event || event.status !== 'failed') {
-      throw new Error('Event not found or not failed');
-    }
-    
-    // Reset status and retry
-    await db.webhookEvents.update(eventId, {
-      status: 'processing',
-      retryCount: (event.retryCount || 0) + 1,
-      retriedAt: new Date()
-    });
-    
-    // Reprocess the webhook
-    await this.processWebhook(event);
-  }
-}
-```
-
-### Logging & Alerting
-
-```typescript
-import { Logger } from 'winston';
-
-class WebhookLogger {
-  constructor(private logger: Logger) {}
-  
-  logWebhookReceived(provider: string, eventType: string, eventId: string) {
-    this.logger.info('Webhook received', {
-      provider,
-      eventType,
-      eventId,
-      timestamp: new Date().toISOString()
-    });
-  }
-  
-  logWebhookProcessed(provider: string, eventType: string, eventId: string, processingTime: number) {
-    this.logger.info('Webhook processed', {
-      provider,
-      eventType,
-      eventId,
-      processingTime,
-      timestamp: new Date().toISOString()
-    });
-  }
-  
-  logWebhookFailed(provider: string, eventType: string, eventId: string, error: any) {
-    this.logger.error('Webhook processing failed', {
-      provider,
-      eventType,
-      eventId,
-      error: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Send alert for critical failures
-    if (this.isCriticalError(error)) {
-      this.sendAlert('Critical webhook failure', {
-        provider,
-        eventType,
-        error: error.message
-      });
-    }
-  }
-  
-  private isCriticalError(error: any): boolean {
-    const criticalErrors = [
-      'DATABASE_CONNECTION_LOST',
-      'PAYMENT_SYSTEM_DOWN',
-      'SECURITY_VIOLATION'
-    ];
-    
-    return criticalErrors.includes(error.code);
-  }
-  
-  private async sendAlert(title: string, details: any) {
-    // Implement your alerting system (Slack, email, PagerDuty, etc.)
-    console.error('ALERT:', title, details);
-  }
-}
-```
-
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="shield-check" title="Always Verify Signatures">
-    ```typescript
-    // Good: Verify every webhook
-    const isValid = verifyWebhookSignature(
-      payload, signature, secret, timestamp
-    );
-    if (!isValid) {
-      return res.status(400).end();
-    }
-    ```
-  </Card>
-  
-  <Card icon="clock" title="Respond Quickly">
-    ```typescript
-    // Good: Respond within 5 seconds
-    app.post('/webhook', async (req, res) => {
-      // Acknowledge receipt immediately
-      res.status(200).json({ received: true });
-      
-      // Process asynchronously
-      setImmediate(() => processWebhook(req.body));
-    });
-    ```
-  </Card>
-  
-  <Card icon="arrows-rotate" title="Handle Retries Gracefully">
-    ```typescript
-    // Good: Idempotent processing
-    const eventId = getEventId(webhook);
-    const existing = await getProcessedEvent(eventId);
-    
-    if (existing) {
-      return res.status(200).json({ processed: true });
-    }
-    ```
-  </Card>
-  
-  <Card icon="bug" title="Log Everything">
-    ```typescript
-    // Good: Comprehensive logging
-    logger.info('Webhook received', {
-      provider: req.params.provider,
-      type: webhook.type,
-      id: webhook.id,
-      timestamp: new Date().toISOString()
-    });
-    ```
-  </Card>
-</CardGroup>
+await tester.testTransactionPending('test_order_789');
+````
 
 ## Troubleshooting
 
@@ -1063,14 +434,6 @@ class WebhookLogger {
 
 <Card title="Error Handling" icon="shield-exclamation" href="/core/error-handling">
   Learn comprehensive error handling strategies
-</Card>
-
-<Card title="Testing Guide" icon="flask" href="/advanced/testing">
-  Test your webhook implementation thoroughly
-</Card>
-
-<Card title="Production Deployment" icon="rocket" href="/advanced/production">
-  Deploy webhooks to production safely
 </Card>
 
 <Card title="API Reference" icon="code" href="/api-reference/webhooks">

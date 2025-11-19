@@ -65,6 +65,17 @@ const client = new PaymentClient({
   Custom logger instance for debugging and monitoring.
 </ParamField>
 
+<ParamField path="webhook" type="WebhookConfig" default="undefined">
+  Webhook configuration for receiving transaction status updates. Optional but recommended for production.
+  
+  ```typescript
+  webhook: {
+    url: 'https://api.myapp.com/webhooks/fundkit',
+    secret: process.env.WEBHOOK_SECRET!
+  }
+  ```
+</ParamField>
+
 ### Advanced Configuration
 
 ```typescript
@@ -90,6 +101,12 @@ const client = new PaymentClient({
     info: msg => logger.info(msg),
     error: msg => logger.error(msg),
     debug: msg => logger.debug(msg),
+  },
+
+  // Webhook configuration
+  webhook: {
+    url: 'https://api.myapp.com/webhooks/fundkit',
+    secret: process.env.WEBHOOK_SECRET!,
   },
 });
 ```
@@ -348,64 +365,6 @@ try {
   }
 }
 ```
-
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="shield-check" title="Always Validate Input">
-    ```typescript
-    // Good: Validate before sending
-    if (!transaction.accountNumber) {
-      throw new Error('Account number required');
-    }
-    
-    const result = await client.collection(transaction);
-    ```
-  </Card>
-  
-  <Card icon="arrows-rotate" title="Handle Failures Gracefully">
-    ```typescript
-    // Good: Implement retry logic
-    let attempts = 0;
-    while (attempts < 3) {
-      try {
-        return await client.collection(transaction);
-      } catch (error) {
-        attempts++;
-        if (attempts === 3) throw error;
-        await sleep(1000 * attempts);
-      }
-    }
-    ```
-  </Card>
-  
-  <Card icon="clock" title="Set Appropriate Timeouts">
-    ```typescript
-    // Good: Configure timeouts
-    const client = new PaymentClient({
-      ...config,
-      timeout: 30000, // 30 seconds
-    });
-    ```
-  </Card>
-  
-  <Card icon="chart-line" title="Monitor Transaction Status">
-    ```typescript
-    // Good: Poll for status updates
-    const checkStatus = async (txId) => {
-      let status = 'pending';
-      while (status === 'pending') {
-        const result = await client.getTransaction({ txId });
-        status = result.status;
-        if (status === 'pending') {
-          await sleep(5000); // Wait 5 seconds
-        }
-      }
-      return status;
-    };
-    ```
-  </Card>
-</CardGroup>
 
 ## Next Steps
 

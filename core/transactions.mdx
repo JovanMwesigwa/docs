@@ -570,59 +570,6 @@ try {
 }
 ```
 
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="id-card" title="Use Meaningful External IDs">
-    ```typescript
-    // Good: Descriptive external IDs
-    externalId: `order_${orderId}_${timestamp}`
-    externalId: `invoice_${invoiceNumber}`
-    externalId: `subscription_${userId}_${month}`
-    ```
-  </Card>
-  
-  <Card icon="clock" title="Handle Timeouts Gracefully">
-    ```typescript
-    // Good: Proper timeout handling
-    try {
-      const result = await client.collection(transaction);
-    } catch (error) {
-      if (error.code === 'TIMEOUT') {
-        // Check status instead of immediate retry
-        const status = await client.getTransaction({
-          provider: error.provider,
-          txId: error.transactionId
-        });
-      }
-    }
-    ```
-  </Card>
-  
-  <Card icon="arrows-rotate" title="Implement Idempotency">
-    ```typescript
-    // Good: Check for existing transaction
-    const existing = await getTransactionByExternalId(externalId);
-    if (existing) {
-      return existing; // Don't create duplicate
-    }
-    
-    const result = await client.collection(transaction);
-    ```
-  </Card>
-  
-  <Card icon="bell" title="Use Webhooks">
-    ```typescript
-    // Good: Real-time updates via webhooks
-    app.post('/webhook', (req, res) => {
-      const event = req.body;
-      updateTransactionStatus(event.data);
-      res.status(200).json({ ok: true });
-    });
-    ```
-  </Card>
-</CardGroup>
-
 ## Next Steps
 
 <CardGroup cols={2}>
@@ -637,10 +584,6 @@ try {
 
 <Card title="API Reference" icon="code" href="/api-reference/transactions">
   Complete transaction API documentation
-</Card>
-
-<Card title="Testing Guide" icon="flask" href="/advanced/testing">
-  Test transactions in sandbox mode
 </Card>
 
 </CardGroup>

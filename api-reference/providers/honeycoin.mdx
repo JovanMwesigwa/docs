@@ -1,6 +1,6 @@
 ---
-title: "HoneyCoin Provider API"
-description: "Complete API reference for the HoneyCoin payment provider in FundKit"
+title: 'HoneyCoin Provider API'
+description: 'Complete API reference for the HoneyCoin payment provider in FundKit'
 ---
 
 # HoneyCoin Provider API Reference
@@ -12,28 +12,24 @@ HoneyCoin is a multi-country mobile money provider supporting Uganda (MTN, Airte
 ### Basic Configuration
 
 ```typescript
-import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
 
-const client = new PaymentClient({
-  honeycoin: {
-    apiKey: 'your-honeycoin-api-key',
-    environment: 'sandbox' // or 'production'
-  }
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+  environment: 'sandbox', // or 'production'
 });
 ```
 
 ### Advanced Configuration
 
 ```typescript
-const client = new PaymentClient({
-  honeycoin: {
-    apiKey: 'your-honeycoin-api-key',
-    environment: 'production',
-    baseUrl: 'https://api.honeycoin.io', // Custom endpoint
-    timeout: 30000,                      // 30 second timeout
-    retries: 3,                         // Retry attempts
-    webhookSecret: 'your-webhook-secret' // For webhook verification
-  }
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+  environment: 'production',
+  timeout: 30000, // 30 second timeout
+  retries: 3, // Retry attempts
 });
 ```
 
@@ -43,13 +39,11 @@ const client = new PaymentClient({
 
 ```typescript
 interface HoneyCoinConfig {
-  apiKey: string;           // Required: Your HoneyCoin API key
+  apiKey: string; // Required: Your HoneyCoin API key
+  publicKey: string; // Required: Your HoneyCoin public key
   environment?: 'sandbox' | 'production'; // Default: 'sandbox'
-  baseUrl?: string;         // Custom API endpoint
-  timeout?: number;         // Request timeout in milliseconds
-  retries?: number;         // Number of retry attempts
-  webhookSecret?: string;   // Secret for webhook verification
-  defaultCountry?: string;  // Default country code ('UG', 'KE', 'TZ')
+  timeout?: number; // Request timeout in milliseconds
+  retries?: number; // Number of retry attempts
 }
 ```
 
@@ -57,36 +51,36 @@ interface HoneyCoinConfig {
 
 ### Multi-Country Support
 
-| Country | Currency | Networks | Min Amount | Max Amount |
-|---------|----------|----------|------------|------------|
-| Uganda | UGX | MTN, Airtel | 1,000 (10 UGX) | 10,000,000 (100,000 UGX) |
-| Kenya | KES | M-Pesa, Airtel | 100 (1 KES) | 1,000,000 (10,000 KES) |
-| Tanzania | TZS | M-Pesa, Tigo, Airtel | 1,000 (10 TZS) | 5,000,000 (50,000 TZS) |
+| Country  | Currency | Networks             | Min Amount     | Max Amount               |
+| -------- | -------- | -------------------- | -------------- | ------------------------ |
+| Uganda   | UGX      | MTN, Airtel          | 1,000 (10 UGX) | 10,000,000 (100,000 UGX) |
+| Kenya    | KES      | M-Pesa, Airtel       | 100 (1 KES)    | 1,000,000 (10,000 KES)   |
+| Tanzania | TZS      | M-Pesa, Tigo, Airtel | 1,000 (10 TZS) | 5,000,000 (50,000 TZS)   |
 
 ### Phone Number Formats
 
 ```typescript
 // Uganda numbers
 const ugandaNumbers = [
-  '+256701234567',  // MTN
-  '+256751234567',  // MTN
-  '+256782234567',  // Airtel
-  '+256702234567'   // Airtel
+  '+256701234567', // MTN
+  '+256751234567', // MTN
+  '+256782234567', // Airtel
+  '+256702234567', // Airtel
 ];
 
 // Kenya numbers
 const kenyaNumbers = [
-  '+254712345678',  // Safaricom (M-Pesa)
-  '+254722345678',  // Safaricom (M-Pesa)
-  '+254733345678',  // Airtel
-  '+254750345678'   // Airtel
+  '+254712345678', // Safaricom (M-Pesa)
+  '+254722345678', // Safaricom (M-Pesa)
+  '+254733345678', // Airtel
+  '+254750345678', // Airtel
 ];
 
 // Tanzania numbers
 const tanzaniaNumbers = [
-  '+255712345678',  // Vodacom (M-Pesa)
-  '+255622345678',  // Airtel
-  '+255652345678'   // Tigo
+  '+255712345678', // Vodacom (M-Pesa)
+  '+255622345678', // Airtel
+  '+255652345678', // Tigo
 ];
 ```
 
@@ -95,19 +89,22 @@ const tanzaniaNumbers = [
 ### Direct Provider Access
 
 ```typescript
-import { HoneyCoinProvider } from '@fundkit/honeycoin';
+import { HoneyCoin } from '@fundkit/honeycoin';
 
-const honeycoin = new HoneyCoinProvider({
-  apiKey: 'your-api-key',
-  environment: 'sandbox'
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+  environment: 'sandbox',
 });
 
 // Direct collection
-const result = await honeycoin.collect({
+const result = await honeycoin.collection({
   amount: 10000,
   currency: 'UGX',
-  phoneNumber: '+256701234567',
-  reason: 'Payment for order #12345'
+  operator: 'mtn',
+  accountNumber: '256701234567',
+  externalId: 'order_12345',
+  reason: 'Payment for order #12345',
 });
 ```
 
@@ -151,17 +148,17 @@ interface HoneyCoinCollectionResponse extends CollectionResponse {
   currency: string;
   phoneNumber: string;
   reason: string;
-  
+
   // HoneyCoin-specific fields
   providerData: {
-    honeycoinTransactionId: string;  // HoneyCoin's internal ID
-    networkOperator: string;         // 'MTN', 'Airtel', 'M-Pesa', etc.
-    networkReference?: string;       // Network confirmation code
-    customerName?: string;           // Customer name from network
-    accountBalance?: number;         // Customer's account balance
-    networkFee: number;             // Network transaction fee
-    processingStage: string;        // Current processing stage
-    estimatedCompletion?: string;   // Estimated completion time
+    honeycoinTransactionId: string; // HoneyCoin's internal ID
+    networkOperator: string; // 'MTN', 'Airtel', 'M-Pesa', etc.
+    networkReference?: string; // Network confirmation code
+    customerName?: string; // Customer name from network
+    accountBalance?: number; // Customer's account balance
+    networkFee: number; // Network transaction fee
+    processingStage: string; // Current processing stage
+    estimatedCompletion?: string; // Estimated completion time
   };
 }
 ```
@@ -267,71 +264,52 @@ interface HoneyCoinCollectionResponse extends CollectionResponse {
 }
 ```
 
-## Webhook Integration
+## Webhooks
 
-### HoneyCoin Webhook Format
+Webhooks are configured at the `PaymentClient` level, not at the provider level. This provides a unified webhook endpoint for all providers.
 
-```typescript
-interface HoneyCoinWebhook {
-  event: 'transaction.updated';
-  transactionId: string;
-  honeycoinTransactionId: string;
-  status: TransactionStatus;
-  timestamp: string;
-  data: {
-    amount: number;
-    currency: string;
-    phoneNumber: string;
-    networkOperator: string;
-    networkReference?: string;
-    customerName?: string;
-    processingStage: string;
-    fees: {
-      networkFee: number;
-      processingFee: number;
-      totalFee: number;
-    };
-  };
-  signature: string; // HMAC-SHA256 signature
-}
-```
-
-### Webhook Verification
+### Webhook Configuration
 
 ```typescript
-import crypto from 'crypto';
+import { PaymentClient } from '@fundkit/core';
+import { HoneyCoin } from '@fundkit/honeycoin';
 
-function verifyHoneyCoinWebhook(
-  payload: string,
-  signature: string,
-  secret: string
-): boolean {
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
-  
-  return crypto.timingSafeEqual(
-    Buffer.from(signature, 'hex'),
-    Buffer.from(expectedSignature, 'hex')
-  );
-}
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+});
 
-// Express.js webhook handler
-app.post('/webhook/honeycoin', (req, res) => {
-  const signature = req.headers['x-honeycoin-signature'] as string;
-  const payload = JSON.stringify(req.body);
-  
-  if (!verifyHoneyCoinWebhook(payload, signature, process.env.HONEYCOIN_WEBHOOK_SECRET!)) {
-    return res.status(401).json({ error: 'Invalid signature' });
-  }
-  
-  const webhook: HoneyCoinWebhook = req.body;
-  console.log('HoneyCoin webhook received:', webhook);
-  
-  res.json({ received: true });
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [honeycoin],
+  webhook: {
+    url: 'https://api.myapp.com/webhooks/fundkit',
+    secret: process.env.WEBHOOK_SECRET!,
+  },
 });
 ```
+
+### Unified Webhook Event Structure
+
+All webhook events follow this unified structure:
+
+```typescript
+interface WebhookEvent {
+  event: 'transaction_completed' | 'transaction_failed' | 'transaction_pending';
+  data: {
+    transactionId: string;
+    transactionType: 'COLLECTION' | 'PAYOUT';
+    amount: string;
+    currency: string;
+    operator: string;
+    accountNumber: string;
+    externalId: string;
+    environment: 'sandbox' | 'production';
+  };
+}
+```
+
+<Info>For detailed webhook implementation, see the [Webhooks Guide](/advanced/webhooks).</Info>
 
 ## Advanced Features
 
@@ -344,14 +322,14 @@ const bulkResults = await honeycoin.bulkCollect([
     amount: 10000,
     currency: 'UGX',
     phoneNumber: '+256701234567',
-    reason: 'Payment 1'
+    reason: 'Payment 1',
   },
   {
     amount: 20000,
     currency: 'KES',
     phoneNumber: '+254712345678',
-    reason: 'Payment 2'
-  }
+    reason: 'Payment 2',
+  },
 ]);
 
 console.log('Bulk processing results:', bulkResults);
@@ -367,7 +345,7 @@ const scheduledPayment = await honeycoin.schedulePayment({
   phoneNumber: '+256701234567',
   reason: 'Monthly subscription',
   scheduledFor: '2024-02-01T09:00:00Z',
-  recurrence: 'monthly'
+  recurrence: 'monthly',
 });
 ```
 
@@ -379,7 +357,7 @@ const analytics = await honeycoin.getAnalytics({
   startDate: '2024-01-01',
   endDate: '2024-01-31',
   country: 'UG',
-  network: 'MTN'
+  network: 'MTN',
 });
 
 console.log(analytics);
@@ -402,12 +380,10 @@ console.log(analytics);
 
 ```typescript
 // Sandbox configuration
-const sandboxClient = new PaymentClient({
-  honeycoin: {
-    apiKey: 'sk_sandbox_honeycoin_test_key',
-    environment: 'sandbox',
-    baseUrl: 'https://sandbox-api.honeycoin.io'
-  }
+const honeycoin = new HoneyCoin({
+  apiKey: process.env.HONEYCOIN_API_KEY!,
+  publicKey: process.env.HONEYCOIN_PUBLIC_KEY!,
+  environment: 'sandbox',
 });
 ```
 
@@ -422,44 +398,58 @@ const testNumbers = {
   failureUG: '+256700000002',
   // Uganda - Times out
   timeoutUG: '+256700000003',
-  
-  // Kenya - Always successful  
+
+  // Kenya - Always successful
   successKE: '+254700000001',
   // Kenya - Insufficient funds
   insufficientKE: '+254700000002',
-  
+
   // Tanzania - Always successful
   successTZ: '+255700000001',
   // Tanzania - Network error
-  networkErrorTZ: '+255700000002'
+  networkErrorTZ: '+255700000002',
 };
 ```
 
 ### Testing Scenarios
 
 ```typescript
+import { PaymentClient } from '@fundkit/core';
+
+const client = new PaymentClient({
+  apiKey: process.env.FUNDKIT_API_KEY!,
+  providers: [honeycoin],
+  environment: 'sandbox',
+});
+
 // Test successful payment
-const successTest = await sandboxClient.collect({
+const successTest = await client.collection({
   amount: 10000,
   currency: 'UGX',
-  phoneNumber: testNumbers.successUG,
-  reason: 'Test successful payment'
+  operator: 'mtn',
+  accountNumber: testNumbers.successUG.replace('+', ''),
+  externalId: 'test_success_001',
+  reason: 'Test successful payment',
 });
 
 // Test failure scenarios
-const failureTest = await sandboxClient.collect({
+const failureTest = await client.collection({
   amount: 50000,
   currency: 'UGX',
-  phoneNumber: testNumbers.failureUG,
-  reason: 'Test payment failure'
+  operator: 'mtn',
+  accountNumber: testNumbers.failureUG.replace('+', ''),
+  externalId: 'test_failure_001',
+  reason: 'Test payment failure',
 });
 
 // Test timeout scenarios
-const timeoutTest = await sandboxClient.collect({
+const timeoutTest = await client.collection({
   amount: 25000,
   currency: 'UGX',
-  phoneNumber: testNumbers.timeoutUG,
-  reason: 'Test payment timeout'
+  operator: 'mtn',
+  accountNumber: testNumbers.timeoutUG.replace('+', ''),
+  externalId: 'test_timeout_001',
+  reason: 'Test payment timeout',
 });
 ```
 
@@ -468,9 +458,9 @@ const timeoutTest = await sandboxClient.collect({
 ### API Rate Limits
 
 | Environment | Requests per minute | Concurrent requests |
-|-------------|-------------------|-------------------|
-| Sandbox | 100 | 10 |
-| Production | 1000 | 50 |
+| ----------- | ------------------- | ------------------- |
+| Sandbox     | 100                 | 10                  |
+| Production  | 1000                | 50                  |
 
 ### Handling Rate Limits
 
@@ -484,37 +474,7 @@ const collectWithRetry = retry(
   {
     retries: 3,
     delay: 1000,
-    backoff: 'exponential'
+    backoff: 'exponential',
   }
 );
 ```
-
-## Best Practices
-
-### Performance Optimization
-
-1. **Reuse Connections**: Use connection pooling for multiple requests
-2. **Batch Operations**: Use bulk operations when possible
-3. **Cache Network Detection**: Cache network detection results
-4. **Optimize Polling**: Use webhooks instead of frequent status checks
-
-### Error Handling
-
-1. **Retry Transient Errors**: Implement retry logic for network errors
-2. **Handle Country-Specific Issues**: Different countries have different network behaviors
-3. **Monitor Network Status**: Track network maintenance windows
-4. **Graceful Degradation**: Handle single network failures gracefully
-
-### Security
-
-1. **Secure API Keys**: Store API keys securely
-2. **Validate Webhooks**: Always verify webhook signatures
-3. **Log Transactions**: Maintain audit logs for compliance
-4. **Monitor Fraud**: Implement fraud detection patterns
-
-### Integration
-
-1. **Test All Networks**: Test with different network providers
-2. **Handle Peak Times**: Account for network congestion during peak hours
-3. **Currency Conversion**: Handle multi-currency scenarios properly
-4. **Compliance**: Follow local regulations for each country

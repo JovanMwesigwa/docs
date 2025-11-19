@@ -454,60 +454,6 @@ client.on('provider:fallback', (fromProvider, toProvider, reason) => {
 });
 ```
 
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="shield-check" title="Use Multiple Providers">
-    ```typescript
-    // Good: Multiple providers for redundancy
-    const client = new PaymentClient({
-      providers: [honeycoin, easypay, tola]
-    });
-    ```
-  </Card>
-  
-  <Card icon="chart-line" title="Monitor Provider Health">
-    ```typescript
-    // Good: Regular health checks
-    setInterval(async () => {
-      for (const provider of providers) {
-        const health = await provider.getHealth();
-        if (health.status === 'unhealthy') {
-          await notifyTeam(provider, health);
-        }
-      }
-    }, 300000); // Every 5 minutes
-    ```
-  </Card>
-  
-  <Card icon="key" title="Secure Credential Storage">
-    ```typescript
-    // Good: Use environment variables
-    const honeycoin = new HoneyCoin({
-      apiKey: process.env.HONEYCOIN_API_KEY!,
-      publicKey: process.env.HONEYCOIN_PUBLIC_KEY!
-    });
-    
-    // Bad: Hardcoded credentials
-    // const honeycoin = new HoneyCoin({
-    //   apiKey: 'hc_123456789',
-    //   publicKey: 'pk_abcdefghi'
-    // });
-    ```
-  </Card>
-  
-  <Card icon="bell" title="Configure Webhooks">
-    ```typescript
-    // Good: Use webhooks for real-time updates
-    const easypay = new EasyPay({
-      apiKey: process.env.EASYPAY_SECRET!,
-      clientId: process.env.EASYPAY_CLIENT_ID!,
-      webhookUrl: 'https://api.myapp.com/webhooks/easypay'
-    });
-    ```
-  </Card>
-</CardGroup>
-
 ## Troubleshooting
 
 <AccordionGroup>

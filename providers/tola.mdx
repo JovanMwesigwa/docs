@@ -672,63 +672,6 @@ async function processTolaWebhook(endpoint: string, event: any) {
 }
 ```
 
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="shield-check" title="Enterprise Security">
-    ```typescript
-    // Good: Enable all security features
-    const tola = new Tola({
-      apiKey: process.env.TOLA_API_KEY!,
-      merchantId: process.env.TOLA_MERCHANT_ID!,
-      enableTwoFactorAuth: true,
-      enableAuditLogging: true,
-      complianceLevel: 'high'
-    });
-    ```
-  </Card>
-  
-  <Card icon="database" title="Use Reconciliation">
-    ```typescript
-    // Good: Regular reconciliation
-    setInterval(async () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      await generateReconciliationReport(
-        yesterday.toISOString().split('T')[0]
-      );
-    }, 24 * 60 * 60 * 1000); // Daily
-    ```
-  </Card>
-  
-  <Card icon="chart-line" title="Monitor Performance">
-    ```typescript
-    // Good: Real-time monitoring
-    const metrics = await tola.getDashboardMetrics();
-    
-    if (metrics.today.successRate < 0.95) {
-      await alertOpsTeam('Low success rate detected');
-    }
-    ```
-  </Card>
-  
-  <Card icon="file-check" title="Detailed Metadata">
-    ```typescript
-    // Good: Rich transaction metadata
-    const transaction = {
-      // ... basic fields
-      metadata: {
-        customerSegment: 'enterprise',
-        salesRep: 'john.doe',
-        contractId: 'CONTRACT_2024_001',
-        departmentCode: 'SALES_UG'
-      }
-    };
-    ```
-  </Card>
-</CardGroup>
-
 ## Support & Resources
 
 <CardGroup cols={2}>
@@ -759,10 +702,6 @@ async function processTolaWebhook(endpoint: string, event: any) {
 
 <Card title="Advanced Features" icon="cog" href="/advanced/webhooks">
   Implement webhooks and real-time updates
-</Card>
-
-<Card title="Enterprise Deployment" icon="building" href="/advanced/production">
-  Deploy Tola for enterprise production use
 </Card>
 
 <Card title="API Reference" icon="code" href="/api-reference/providers/tola">

@@ -632,61 +632,6 @@ setInterval(() => {
 }, 60000); // Every minute
 ```
 
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card icon="shield-check" title="Always Check Error Type">
-    ```typescript
-    // Good: Check error type
-    if (error instanceof FundKitError) {
-      handleFundKitError(error);
-    } else {
-      handleUnexpectedError(error);
-    }
-    
-    // Bad: Assume all errors are FundKit errors
-    // handleFundKitError(error);
-    ```
-  </Card>
-  
-  <Card icon="users" title="Provide User-Friendly Messages">
-    ```typescript
-    // Good: User-friendly message
-    showMessage(
-      'Please top up your account and try again',
-      'error'
-    );
-    
-    // Bad: Technical error message
-    // showMessage(error.message, 'error');
-    ```
-  </Card>
-  
-  <Card icon="arrows-rotate" title="Respect Retry Guidelines">
-    ```typescript
-    // Good: Check if retryable
-    if (error.canRetry) {
-      setTimeout(() => retryPayment(), 
-                 (error.retryAfter || 5) * 1000);
-    }
-    
-    // Bad: Always retry
-    // setTimeout(() => retryPayment(), 1000);
-    ```
-  </Card>
-  
-  <Card icon="chart-line" title="Monitor Error Patterns">
-    ```typescript
-    // Good: Track error patterns
-    analytics.track('payment_error', {
-      code: error.code,
-      provider: error.provider,
-      canRetry: error.canRetry
-    });
-    ```
-  </Card>
-</CardGroup>
-
 <Warning>
   **Security Note:** Never log sensitive information like API keys, customer PINs, or full account numbers in error logs. FundKit automatically sanitizes error details, but always review your logging practices.
 </Warning>
@@ -695,16 +640,8 @@ setInterval(() => {
 
 <CardGroup cols={2}>
 
-<Card title="Testing Errors" icon="flask" href="/advanced/testing">
-  Learn how to test error scenarios in sandbox mode
-</Card>
-
 <Card title="Webhooks" icon="webhook" href="/advanced/webhooks">
   Handle transaction status updates via webhooks
-</Card>
-
-<Card title="Production Checklist" icon="clipboard-check" href="/advanced/production">
-  Prepare your error handling for production
 </Card>
 
 <Card title="API Reference" icon="code" href="/api-reference/errors">
