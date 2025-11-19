@@ -69,15 +69,22 @@ When deploying to Railway, ensure you're using Node.js v19 or higher. Railway ma
 
 **To fix Node.js version on Railway:**
 
-1. **Option 1: Add `.nvmrc` file** (Recommended)
+1. **If using Dockerfile** (Most Common)
+   Update your `Dockerfile` to use Node.js v20:
+
+   ```dockerfile
+   FROM node:20-alpine
+   ```
+
+2. **Option 1: Add `.nvmrc` file**
    Create a `.nvmrc` file in your docs directory:
 
    ```bash
    echo "20" > .nvmrc
    ```
 
-2. **Option 2: Specify in `package.json`**
-   Add an `engines` field to your `package.json`:
+3. **Option 2: Specify in `package.json`**
+   Ensure your `package.json` has:
 
    ```json
    {
@@ -87,7 +94,7 @@ When deploying to Railway, ensure you're using Node.js v19 or higher. Railway ma
    }
    ```
 
-3. **Option 3: Set in Railway Dashboard**
+4. **Option 3: Set in Railway Dashboard**
    - Go to your Railway project settings
    - Navigate to "Variables"
    - Add `NODE_VERSION=20` (or `NODE_VERSION=19`)
@@ -128,10 +135,11 @@ We suggest using extensions on your IDE to recognize and format MDX. If you're a
     This error occurs when Railway is using Node.js v18 or lower. Mintlify requires Node.js v19 or higher.
     
     **Solution:**
-    1. Create a `.nvmrc` file in your docs directory with `20` (or `19`)
-    2. Or add `"engines": { "node": ">=19.0.0" }` to your `package.json`
-    3. Or set `NODE_VERSION=20` in Railway environment variables
-    4. Redeploy your application
+    1. **If using Dockerfile**: Update `FROM node:18-alpine` to `FROM node:20-alpine` in your Dockerfile
+    2. Create a `.nvmrc` file in your docs directory with `20` (or `19`)
+    3. Ensure `"engines": { "node": ">=19.0.0" }` is in your `package.json`
+    4. Or set `NODE_VERSION=20` in Railway environment variables
+    5. Redeploy your application
   </Accordion>
 </AccordionGroup>
 
