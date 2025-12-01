@@ -326,6 +326,70 @@ app.post('/webhooks/honeycoin', (req, res) => {
 });
 ```
 
+## Testing Transactions
+
+### Auto-Confirm Testing (Sandbox Only)
+
+In sandbox mode, you can test transactions without opening the emulator by using special test phone numbers:
+
+<Info>
+  **Auto-confirm feature:** Use phone numbers ending in `11111111` for automatic success or
+  `00000000` for automatic failure. No emulator interaction required!
+</Info>
+
+#### Auto-Success Transactions
+
+Use a phone number with country code + `11111111` to automatically simulate a successful transaction:
+
+```typescript
+// Automatically succeeds - no emulator needed
+const successTx = {
+  amount: 10000,
+  currency: 'UGX',
+  operator: 'mtn',
+  accountNumber: '25611111111', // Country code + 11111111
+  externalId: 'test_success_123',
+  reason: 'Auto-success test',
+};
+
+const result = await client.collection(successTx);
+// Transaction will automatically complete successfully
+```
+
+#### Auto-Failed Transactions
+
+Use a phone number with country code + `00000000` to automatically simulate a failed transaction:
+
+```typescript
+// Automatically fails - no emulator needed
+const failedTx = {
+  amount: 10000,
+  currency: 'UGX',
+  operator: 'mtn',
+  accountNumber: '25600000000', // Country code + 00000000
+  externalId: 'test_failed_123',
+  reason: 'Auto-fail test',
+};
+
+const result = await client.collection(failedTx);
+// Transaction will automatically fail
+```
+
+**Supported formats:**
+
+- `25611111111` (Uganda - auto-success)
+- `25600000000` (Uganda - auto-fail)
+- `25411111111` (Kenya - auto-success)
+- `25400000000` (Kenya - auto-fail)
+- `25511111111` (Tanzania - auto-success)
+- `25500000000` (Tanzania - auto-fail)
+- Works with any country code + `11111111` or `00000000`
+
+<Tip>
+  This feature only works in sandbox mode. Use these test numbers to quickly iterate on your
+  integration without waiting for emulator interactions.
+</Tip>
+
 ## Transaction Validation
 
 ### Input Validation
